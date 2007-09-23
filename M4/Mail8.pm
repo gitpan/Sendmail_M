@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.2;
+$VERSION= 0.22;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.21 (early Beta)
+Version 0.22 (early Beta)
 Very much a work in progress.
 
 =head1 SYNOPSIS
@@ -84,6 +84,34 @@ mail8_zombie now included in distro, install it to get the full benifits
 =item 0.21
 
 22 September 2007 CPAN Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 23
+
+September 2007 B<sendmail> works fine in command line test mode. But complains of "too many long names" when this is installed and run, "sendmail" assigns on the "fly" macro names!????!!!!?.
+
+A limit of 96 (8 Bit limits?) is really too constrictive.
+
+=over 3
+
+=item *
+
+1st try now using {MashTemp} instead of {MashStack}, saves some, so sendmail falls over a little later!
+
+=item *
+
+OPTION NOMASH used where possible, also "OPTION MASH 1" to conserve name space in other places, this and changes to B<Utils> have removed 20 names
+
+=back
+
+=back
+
+=item 0.22
+
+23 September 2007 CPAN Release
 
 =back
 
@@ -493,20 +521,20 @@ INLINE
 NOTEST AUTO
 R £-.£-.£-.£-       £: £1
 R £*                £: £>$M £1
-R £*                £: £(SelfMacro {MashStack1} £@ £1 £) £1        Padded digit 1
+R £*                £: £(SelfMacro {MashTempA} £@ £1 £) £1        Padded digit 1
 R £*                £: £&{MashSelf}
 R £-.£-.£-.£-       £: £2
 R £*                £: £>$M £1
-R £*                £: £(SelfMacro {MashStack2} £@ £1 £) £1        Padded digit 2
+R £*                £: £(SelfMacro {MashTempB} £@ £1 £) £1        Padded digit 2
 R £*                £: £&{MashSelf}
 R £-.£-.£-.£-       £: £3
 R £*                £: £>$M £1
-R £*                £: £(SelfMacro {MashStack3} £@ £1 £) £1        Padded digit 3
+R £*                £: £(SelfMacro {MashTempC} £@ £1 £) £1        Padded digit 3
 R £*                £: £&{MashSelf}
 R £-.£-.£-.£-       £: £4
 R £*                £: £>$M £1
-R £*                £: £(SelfMacro {MashStack4} £@ £1 £) £1        Padded digit 4
-R £*                £: £&{MashStack1}.£&{MashStack2}.£&{MashStack3}.£&{MashStack4}
+R £*                £: £(SelfMacro {MashTempD} £@ £1 £) £1        Padded digit 4
+R £*                £: £&{MashTempA}.£&{MashTempB}.£&{MashTempC}.£&{MashTempD}
 RULE
     }
 
@@ -571,21 +599,21 @@ GLOBAL E
 INLINE
 NOTEST AUTO
 R £-.£-.£-.£-       £: £(Math * £@ £1 £@ 1000000000 £: ERR £)       must not resolv to 0
-R £*                £: £(SelfMacro {MashStack1} £@ £1 £) £1         digit 1
+R £*                £: £(SelfMacro {MashTempA} £@ £1 £) £1         digit 1
 R £*                £: £&{MashSelf}
 R £-.£-.£-.£-       £: £(Math * £@ £2 £@ 1000000 £: ERR £)          however following digits can be 0
-R £*                £: £(SelfMacro {MashStack2} £@ £1 £) £1         digit 2
+R £*                £: £(SelfMacro {MashTempB} £@ £1 £) £1         digit 2
 R £*                £: £&{MashSelf}
 R £-.£-.£-.£-       £: £(Math * £@ £3 £@ 1000 £: ERR £)
-R £*                £: £(SelfMacro {MashStack3} £@ £1 £) £1         digit 3
+R £*                £: £(SelfMacro {MashTempC} £@ £1 £) £1         digit 3
 R £*                £: £&{MashSelf}
-R £-.£-.£-.£-       £: £(SelfMacro {MashStack4} £@ £4 £) £1         digit 4
+R £-.£-.£-.£-       £: £(SelfMacro {MashTempD} £@ £4 £) £1         digit 4
 dnl now add the parts dnl
-R £*                £: £(Math + £@ £&{MashStack1} £@ £&{MashStack2} £: ERR £)
-R £*                £: £(SelfMacro {MashStack12} £@ £1 £) £1       1 and 2
-R £*                £: £(Math + £@ £&{MashStack3} £@ £&{MashStack4} £: ERR £)
-R £*                £: £(SelfMacro {MashStack34} £@ £1 £) £1       3 and 4
-R £*                £: £(Math + £@ £&{MashStack12} £@ £&{MashStack34} £: ERR £)
+R £*                £: £(Math + £@ £&{MashTempA} £@ £&{MashTempB} £: ERR £)
+R £*                £: £(SelfMacro {MashTempA} £@ £1 £) £1       1 and 2
+R £*                £: £(Math + £@ £&{MashTempC} £@ £&{MashTempD} £: ERR £)
+R £*                £: £(SelfMacro {MashTempB} £@ £1 £) £1       3 and 4
+R £*                £: £(Math + £@ £&{MashTempA} £@ £&{MashTempB} £: ERR £)
 R 0                 £: £&{MashSelf}                                 a value of zero means nothing worked
 RULE
 
@@ -952,6 +980,7 @@ RULE
         $Screen_bad_relay_rule .= <<RULE;
 # now for systems that are not local
 R £*    £: MACRO{ £1    # check for systems that may have problems
+    OPTION MASH 1
     HINT This checks mail8's DataBases for IP's or domain names?
     dnl mail8 database checks  dnl
     R £*            £: £(mail4db £1 £: £1 £)          mail4 DB, poorly configured systems, that will fail tests
@@ -977,6 +1006,7 @@ RULE
         $Screen_bad_relay_rule .= <<RULE;
 # now for systems that are not local
 R £*    £: MACRO{ £1    # check for systems that may have problems
+    OPTION MASH 1
     HINT This checks mail8's DataBases for IP's or domain names?
     dnl mail8 database checks  dnl
     R £*            £: £(mail4db £1 £: £1 £)          mail4 DB, poorly configured systems, that will fail tests
@@ -1056,10 +1086,12 @@ TEST SANE(Local_check_mail) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_a
 TEST SANE(Local_check_mail) F(<>) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE)     
 R £*            £: £&{Refused}      has this host already been refused?
 R £+.FOUND      £@ MACRO{ £1
+    OPTION NOMASH
     TEST D({Refused}991.2.3.4) E(991.2.3.4, blah.blah)
     TEST D({AlreadyRefused}994.3.2.1.FOUND) E(994.3.2.1)
     R £*            £: £&{AlreadyRefused}     refused more than once?
     R £+.FOUND      £: MACRO{
+        OPTION NOMASH
         TEST E(nogin.the.nog)
         dnl even if the perl helpers are not installed  dnl
         R £*        £: £>ScreenMail9blocker £{mail8yhabr}       already has been warned, attempt to drop IP
@@ -1072,12 +1104,14 @@ R £+.FOUND      £@ MACRO{ £1
 dnl restore original value dnl
 R £*            £: £&{MashSelf}
 R £*            £: MACRO{ £1
+    OPTION NOMASH
     TEST SANE(Local_check_mail, BadRelay) E(you\@localhost)
     TEST SANE(Local_check_mail) D({Paranoid}1) V(<>)
     TEST SANE(Local_check_mail) D({Paranoid}2) V(<>)
     TEST SANE(Local_check_mail) D({Paranoid}3) V(<>)
     TEST SANE(Local_check_mail) D({Paranoid}4) E(<>)
     R £+ @ £+       £@ MACRO{ £2    # check HOST part of FROM address
+        OPTION NOMASH
         TEST SANE(Local_check_relay)
         TEST SANE(Local_check_mail) E(localhost, host.localhost, any.host.localhost)
         TEST SANE(GoodRelay)
@@ -1086,6 +1120,7 @@ R £*            £: MACRO{ £1
         dnl NOTE: sendmail already checks that the HOST part of the domain name makes sense dnl
         IS FOUND GoodRelay £@ £1    our own systems are presumed OK
         R £*            £: MACRO{ £1 # check claimed host name against local names
+            OPTION NOMASH
             TEST F(home.localhost, this.is.home.localhost)
             R £* £=w               £@ £1.Local.FOUND
             R £* £={VirtHost}      £@ £1.VirtHost.FOUND
@@ -1126,6 +1161,7 @@ RULE
 #
 dnl now we know FROM sort of makes sense check sender dnl
 R £*        £: MACRO{ £1    # checking HELO
+    OPTION NOMASH
     TEST SANE(Local_check_relay)
     TEST SANE(Local_check_mail)
     TEST D(smail.bogus.bogus) E(NA)
@@ -1137,6 +1173,7 @@ R £*        £: MACRO{ £1    # checking HELO
     dnl now for everybody else
     R £*            £: £&s      HELO name requires checking
     R £*            £: MACRO{ £1 # Check helo
+        OPTION MASH 1
         TEST F(home.localhost, this.is.home.localhost)
         TEST F(80.176.153.184) D({client_addr}80.176.153.184)
         dnl some just use their IP? no way can these be legal? dnl
@@ -1165,6 +1202,7 @@ RULE
     #
     dnl does the senders HELO resolve? dnl
     R £*            £: MACRO{ £1  # check HELO with client_name and then DNS
+        OPTION MASH 1
         TEST D({client_resolve}OK, {client_name}bogus.host.bogus, sbogus.host.bogus) F(bogus.host.bogus)
         TEST D({client_resolve}FAIL, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
         TEST D({client_resolve}TEMP, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
@@ -1176,6 +1214,7 @@ RULE
         #
         R £*            £: £(Rlookup £&{MashSelf} £)      HELO host, DNS lookup needed
         R £+.FOUND      £@ MACRO{ £1    #  HELO resolves
+            OPTION MASH 2
             TEST D({client_addr}192.168.0.1, {client_name}NA.192.168.0.1.NA, sNA.NA) F(192.168.0.1) E(10.0.0.1)
             R £&{client_addr}   £@ £&{MashSelf}.FOUND
             REFUSED £#error £@ 5.1.8 £: "550 SPAMMER claimed to be: " £&s "with address:" £&{MashSelf}
@@ -1277,8 +1316,10 @@ R £*            £: MACRO{ £1 # first check wether sender is local
     R £+.FOUND      £@ £1.FOUND
     R £*            £: £&{BadRelay}         relays with problems, more checking needed
     R £+.FOUND      £@ MACRO{ £1
+        OPTION NOMASH
         TEST D({rcpt_addr}match.this) V(match.this.mail3) E(not.this.mail3)
         R £*.mail3      £@ MACRO{ £1 # Trouble Ticket user
+            OPTION MASH 2
             TEST D({rcpt_addr}bingo.local) V(bingo.local) E(bad.nothing)
             R £&{rcpt_addr}     £@ £&{MashSelf}
             R £*                £@ £>ScreenMail8blocker £{mail3tt}
@@ -1286,6 +1327,7 @@ R £*            £: MACRO{ £1 # first check wether sender is local
     }MACRO
     R £*            £: £&{Bounce}
     R £+.FOUND      £@ MACRO{ £1
+        OPTION NOMASH
         TEST D({Paranoid}2, {rcpt_host}localhost) O(localhost)
         TEST D({Paranoid}2, {rcpt_host}not.such.host) E(not.such.host)
         TEST D({Paranoid}3, {rcpt_host}localhost) O(localhost)
@@ -1294,6 +1336,7 @@ R £*            £: MACRO{ £1 # first check wether sender is local
         R £*            £: £&{Paranoid}
         R 2             £: OK2.£&{rcpt_host}
         R OK2.£+        £@ MACRO{ £1
+            OPTION NOMASH
             TEST D({rcpt_host}na.auto.na)
             TEST O(localhost)
             TEST AUTO(O OUR HELO, E BAD HELO)
@@ -1393,8 +1436,10 @@ R £*    £: MACRO{ £1
     dnl others will need checking dnl
     R £*            £: £&{hdr_name}
     R Received:     £@ MACRO{ £&{currHeader}
+        OPTION NOMASH
         TEST V(anon did not find this,bog standard mailer)
         R £+by £+ £+        £: MACRO{ £2 # claiming to be one of our domains?
+            OPTION MASH 2
             TEST AUTO(E OUR HELO, V OK HELO)
             dnl localhost is to be expected, most liky as the first server? dnl
             R localhost         £@ £&{MashSelf}

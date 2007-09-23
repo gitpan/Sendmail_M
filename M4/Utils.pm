@@ -9,7 +9,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.21;
+$VERSION= 0.23;
 
 use IO::File;
 use IO::Select;
@@ -25,7 +25,7 @@ Sendmail::M4::Utils - create and test sendmail M4 hack macro files
 
 =head1 STATUS
 
-Version 0.22 (early Beta)
+Version 0.23 (early Beta)
 Very much a work in progress.
 HTML coding just STUBS at the moment.
 
@@ -209,6 +209,32 @@ B<MACRO{> DEBUG statement added to switch on debuging within the TEST line read 
 =item 0.22 
 
 22 Sept 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
+=item 22
+
+Sept 2007, installed on a test system, started to run ("too many long names" again) AAARGH! 
+
+{MashTemp} added a variant of {MashStack}, differnce being the reduced number of names generated, the names only being safe only in the current macro, and can be clobbered by contained macros, that use this. You have been warned!
+
+=item 23
+
+Sept 2007, B<Macro{> OPTION added, this is to enable such things 
+
+OPTION NO MASH    
+
+OPTION MASH 1       mash nameing policy uses {Mash1}   
+
+Also added sub option to INLINE ALLWAYS MASH, which overides the normal macro nameing policy, internal methods now use the mash name {MashTempA} for purposes of saving and returning a value.
+
+=back
+
+=item 0.23 
+
+23 Sept 2007 CPAN Amended version
 
 B<Amendments to release version>
 
@@ -1154,16 +1180,18 @@ Note: ALLWAYS is the 1st sub argument after INLINE, and other sub arguments may 
 
     Usage:
             INLINE ALLWAYS MASH
+            INLINE ALLWAYS MASH TempA
 
 B<NOMASH> which also stops the normal action of saving the original value.
 
     Usage:
             INLINE NOMASH
 
-B<MASH> retores original saved value at the end of this macro rule, so for routines that are much used, they remain more like the original MACRO specification (without INLINE)
+B<MASH> retores original saved value at the end of this macro rule, so for routines that are much used, they remain more like the original MACRO specification (without INLINE), also a over-ride value for MASH may follow, internal methods use B<TempA> which results in {MashTempA}
 
     Uasage:
             INLINE MASH
+            INLINE MASH TempA
 
 =back            
 
@@ -1183,12 +1211,12 @@ May be used in explicitly named rulesets and MACROs, the entire line B<R $*   $:
     my $INLINE = $macro_rules->[0];
     my $use_inline = $inline;
     my $allways;
-    my ($NOMASH,$MASH);
+    my ($NOMASH,$MASH,$OPTION,$TEMP);
     if ( $INLINE =~ s/^\s*INLINE\s*// )
     {
         $INLINE =~ s/^ALLWAYS\s*// and $use_inline = $allways = 1;
         $INLINE =~ /^NOMASH\s*/ and $NOMASH = 1;
-        $INLINE =~ /^MASH\s*/ and $MASH = 1;
+        $INLINE =~ s/^MASH\s*// and $MASH = 1 and $TEMP = $INLINE;
         shift @$macro_rules;
         if ( $use_inline )
         {
@@ -1212,6 +1240,43 @@ May be used in explicitly named rulesets and MACROs, the entire line B<R $*   $:
         }
         $INLINE = 1;
     }
+
+=pod
+
+OPTION
+
+=over 2
+
+B<OPTION> must be the very first line, (after B<GLOBAL> if used), and can not be used with B<INLINE>, it supports sub arguments that alter the formatation of normal non INLINE macros.
+
+B<OPTION> supports sub arguments
+
+=over 4
+
+B<NOMASH> which also stops the normal action of saving the original value.
+
+    Usage:
+            OPTION NOMASH
+
+B<MASH> which forces the Macro to use a B<known> value for its mash
+
+    Usage:
+            OPTION MASH 1
+
+    Which generates {MashA1} if GLOBAL is A            
+
+=back            
+
+=back
+
+=cut    
+    elsif ( $INLINE =~ s/^\s*OPTION\s*// )
+    {
+        $INLINE =~ /^NOMASH\s*/ and $NOMASH = 1;
+        $INLINE =~ s/^MASH\s*// and $MASH = $OPTION = $INLINE;
+        shift @$macro_rules;
+        $INLINE = undef;
+    }
     else
     {
         $INLINE = undef;
@@ -1229,7 +1294,19 @@ May be used in explicitly named rulesets and MACROs, the entire line B<R $*   $:
     my $mash = push @$rule_list, $rule;
 #GLOBAL 
     my $global      = $rule_set->{'G'};
-    if ( scalar $global )
+    if ( scalar $TEMP )
+    {
+        $mash = $TEMP;
+    }
+    elsif ( scalar $global and scalar $OPTION )
+    {
+        $mash = "$global$OPTION";
+    }
+    elsif ( scalar $OPTION )
+    {
+        $mash = $OPTION;
+    }
+    elsif ( scalar $global )
     {
         my $mashed = scalar @$macros;
         $mash = "$global$mashed";
@@ -1415,7 +1492,7 @@ comments may be used, this will be included as a "dnl" line within the macro
             my $comment = (scalar $comments)?($comments):("if FOUND save into $load_macro");
             my $LOAD_MACRO = "SelfMacro$load_macro";
             my $found_macro = <<FOUND;
-    INLINE ALLWAYS MASH
+    INLINE ALLWAYS MASH TempA
     NOTEST AUTO        
     dnl $comment dnl
     R £+.FOUND          £: $LOAD_MACRO.£1.FOUND
@@ -1531,7 +1608,7 @@ B<AND> is a special sub macro statement that allows the actions that REFUSED|ALR
                 }
                 my $LOAD_MACRO = "SelfMacro$load_macro";
                 my $found_macro = <<FOUND;
-    INLINE ALLWAYS MASH
+    INLINE ALLWAYS MASH TempA
     NOTEST AUTO        
 FOUND
                 if ( scalar $this_found )
@@ -1626,7 +1703,7 @@ Normally
             }
             my $LOAD_MACRO = "SelfMacro$load_macro";
             my $found_macro = <<FOUND;
-    INLINE ALLWAYS MASH
+    INLINE ALLWAYS MASH TempA
     NOTEST AUTO        
     R £*                £: £&{client_addr}.FOUND
     R £*                £: £(SelfMacro {$load_macro} £@ £1 £) £1
@@ -1716,6 +1793,27 @@ Usage
                     $line .= $next;
                 }
             }
+            push @$rules, $line;
+        }
+
+=pod
+
+{MashTemp}
+
+=over 2
+
+{MashTemp} provides a lasy way to keep very temporary data, these values are only dependable within the current Macro, and may be clobbered by contained Macro's. This method exits to reduce further the number of B<sendmail {macro names}>.
+Allways append something to the "MashTemp", such as "A" as shown in the example. Remember to use a consistant sub naming policy to minimise the generated names, we recomend using the sequence (A,B,C,D ..) but use as few as possible.
+
+Usage
+    R $*    $: &${MashTempA}
+    R $*    $: &${MashTempB}
+
+=back
+
+=cut
+        elsif ( $line =~ /\{MashTemp\}/ )
+        {
             push @$rules, $line;
         }
 
