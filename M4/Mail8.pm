@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.22;
+$VERSION= 0.23;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.22 (early Beta)
+Version 0.23 (early Beta)
 Very much a work in progress.
 
 =head1 SYNOPSIS
@@ -113,6 +113,21 @@ OPTION NOMASH used where possible, also "OPTION MASH 1" to conserve name space i
 
 23 September 2007 CPAN Release
 
+B<Amendments to release version>
+
+=over 3
+
+=item 23
+
+Sept 2007, on SuSE 10.1 (remastered) sendmail version 8.13.6, complained of an unbalanced E<gt>, not the fault of the sender but a macro? why did sendmail then decide to 553???, had no problem with the same code on SuSE 9.3 sendmail 8.13.3?
+
+So a single line added and hopefully all will be well, and this system can finally protect celmorlauren, we suffer quite a lot of spam, so we should be able to spot any other weakness in the code.
+
+=back
+
+=item 0.23
+
+23 September 2007 CPAN Release
 =back
 
 =head1 USES
@@ -1110,6 +1125,7 @@ R £*            £: MACRO{ £1
     TEST SANE(Local_check_mail) D({Paranoid}2) V(<>)
     TEST SANE(Local_check_mail) D({Paranoid}3) V(<>)
     TEST SANE(Local_check_mail) D({Paranoid}4) E(<>)
+    R < £+ >        £1
     R £+ @ £+       £@ MACRO{ £2    # check HOST part of FROM address
         OPTION NOMASH
         TEST SANE(Local_check_relay)
@@ -1277,6 +1293,14 @@ TEST E(error message)
 R £*        £#error £@ 5.1.8 £: "550 SPAMMER, GO AWAY!" £1
 RULE
     }
+
+#    inbuilt_rule <<RULE;
+#check_mail
+#TEST SANE(Local_check_relay, Local_check_mail)
+#TEST AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, V OK FROM)    
+#TEST D(spause.fiz-chemie.de, {client_addr}195.149.117.110, {client_name}pause.fiz-chemie.de, {client_resolve}OK)    
+#TEST F(<nobody\@pause.perl.org>)    
+#RULE
 }
 
 =head2 local_check_rcpt     GLOBAL A
@@ -1360,6 +1384,15 @@ RULE
 }MACRO
 RULE
     rule $local_check_rcpt_rule;
+
+#    inbuilt_rule <<RULE;
+#check_rcpt
+#TEST SANE(Local_check_relay, Local_check_mail)
+#TEST AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, V OUR FROM)    
+#TEST D(spause.fiz-chemie.de, {client_addr}195.149.117.110, {client_name}pause.fiz-chemie.de, {client_resolve}OK)    
+#TEST V(<ian\@daisymoo.com>)    
+#TEST E(<nobody\@pause.perl.org>)    
+#RULE
 }
 
 =head2 check_data       GLOBAL A
