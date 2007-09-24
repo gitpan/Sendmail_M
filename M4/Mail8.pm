@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.23;
+$VERSION= 0.24;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.23 (early Beta)
+Version 0.24 (early Beta)
 Very much a work in progress.
 
 =head1 SYNOPSIS
@@ -128,6 +128,22 @@ So a single line added and hopefully all will be well, and this system can final
 =item 0.23
 
 23 September 2007 CPAN Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 24
+
+Sept 2007, it appears we have caused a problem with the changes above, HELO's are failing when they should not.
+added failed hosts to test data, to try and ensure it does not happen again.
+
+=back
+
+=item 0.24
+
+24 September 2007 CPAN Release
+
 =back
 
 =head1 USES
@@ -1089,9 +1105,9 @@ TEST SANE(Local_check_relay)
 # also use lowest sensible value for paranoid
 TEST D({Paranoid}1)
 # 1st check normal legal external senders who have no special rights or needs
-TEST SANE(Local_check_mail) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE, F OK FROM)     
+TEST SANE(Local_check_mail) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE, V OK FROM)     
 # retest assuming sudo bounce (callback verify) which we have to tollarate to some degree
-TEST SANE(Local_check_mail) F(<>) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE)     
+TEST SANE(Local_check_mail) V(<>) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE)     
 # 2nd check senders who failed with the last release, and should still fail
 TEST SANE(Local_check_mail) AUTO(D; BAD; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE;, E BAD FROM)     
 # 3rd check our domain who should be able to do anthing
@@ -1219,14 +1235,14 @@ RULE
     dnl does the senders HELO resolve? dnl
     R £*            £: MACRO{ £1  # check HELO with client_name and then DNS
         OPTION MASH 1
-        TEST D({client_resolve}OK, {client_name}bogus.host.bogus, sbogus.host.bogus) F(bogus.host.bogus)
+        TEST D({client_resolve}OK, {client_name}bogus.host.bogus, sbogus.host.bogus) V(bogus.host.bogus)
         TEST D({client_resolve}FAIL, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
         TEST D({client_resolve}TEMP, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
         TEST D({client_resolve}FORGED, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
         R £*                    £: £&{client_resolve}
         R OK                    £: OK.£&{MashSelf}
         # HELO could be same as client_name
-        R OK.£&{client_name}    £@ £&{MashSelf}.FOUND       already known, no need to look up
+        R OK.£&{client_name}    £@ £&{MashSelf}.OK       already known, no need to look up
         #
         R £*            £: £(Rlookup £&{MashSelf} £)      HELO host, DNS lookup needed
         R £+.FOUND      £@ MACRO{ £1    #  HELO resolves
@@ -1294,13 +1310,12 @@ R £*        £#error £@ 5.1.8 £: "550 SPAMMER, GO AWAY!" £1
 RULE
     }
 
-#    inbuilt_rule <<RULE;
-#check_mail
-#TEST SANE(Local_check_relay, Local_check_mail)
-#TEST AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, V OK FROM)    
-#TEST D(spause.fiz-chemie.de, {client_addr}195.149.117.110, {client_name}pause.fiz-chemie.de, {client_resolve}OK)    
-#TEST F(<nobody\@pause.perl.org>)    
-#RULE
+    inbuilt_rule <<RULE;
+check_mail
+TEST SANE(Local_check_relay, Local_check_mail)
+TEST SANE(Local_check_mail) AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, V OK FROM)    
+TEST SANE(Local_check_mail) AUTO(D;BAD; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, E BAD FROM)    
+RULE
 }
 
 =head2 local_check_rcpt     GLOBAL A
@@ -1385,14 +1400,12 @@ RULE
 RULE
     rule $local_check_rcpt_rule;
 
-#    inbuilt_rule <<RULE;
-#check_rcpt
-#TEST SANE(Local_check_relay, Local_check_mail)
-#TEST AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, V OUR FROM)    
-#TEST D(spause.fiz-chemie.de, {client_addr}195.149.117.110, {client_name}pause.fiz-chemie.de, {client_resolve}OK)    
-#TEST V(<ian\@daisymoo.com>)    
-#TEST E(<nobody\@pause.perl.org>)    
-#RULE
+    inbuilt_rule <<RULE;
+check_rcpt
+TEST SANE(Local_check_relay, Local_check_mail)
+TEST SANE(Local_check_mail) AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, V OUR RCPT)    
+TEST SANE(Local_check_mail) AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, E OK FROM)    
+RULE
 }
 
 =head2 check_data       GLOBAL A
@@ -1476,6 +1489,7 @@ R £*    £: MACRO{ £1
             TEST AUTO(E OUR HELO, V OK HELO)
             dnl localhost is to be expected, most liky as the first server? dnl
             R localhost         £@ £&{MashSelf}
+            R £* localdomain    £@ £&{MashSelf}
             R £* local          £@ £&{MashSelf}
             R £* lan            £@ £&{MashSelf}
             dnl  standard private domains are assumed to be ok dnl
@@ -1483,9 +1497,9 @@ R £*    £: MACRO{ £1
             R 172.16.£+         £@ £&{MashSelf}
             R 10.£+             £@ £&{MashSelf}
             dnl now check for our systems
-            R £* £=w               £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £1
-            R £* £={VirtHost}      £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £1
-            R £* £=R               £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £1
+            R £* £=w               £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £&{MashSelf}
+            R £* £={VirtHost}      £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £&{MashSelf}
+            R £* £=R               £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £&{MashSelf}
 RULE
     if ( $mail8_setup->{'PerlHelpers'} )
     {

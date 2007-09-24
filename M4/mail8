@@ -14,7 +14,7 @@ Sendmail::M4::mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.2 (early Beta)
+Version 0.21 (early Beta)
 Very much a work in progress.
 
 =head1 SYNOPSIS
@@ -67,13 +67,16 @@ OUR
 #
 # HELO              DOMAIN  IP          RESOLVE     FROM                        RCPT
 mail.celmorlauren.com, 0, 80.176.153.184, FAIL, development\@celmorlauren.com, development\@celmorlauren.co.uk
-mail.celmorlauren.co.uk, 0, 80.176.153.184, FAIL, development\@celmorlauren.co.uk development\@celmorlauren.com
+mail.celmorlauren.co.uk, 0, 80.176.153.184, FAIL, development\@celmorlauren.co.uk, development\@celmorlauren.com
 
 OK
 mail1.contact.reed.co.uk,mail1.contact.reed.co.uk,217.64.230.1,OK,no-reply\@contact.reed.co.uk,development\@celmorlauren.com
+x1.develooper.com,x1.develooper.com,65.251.223.170,OK,<nobody\@pause.perl.org>,<development\@celmorlauren.com>
+mail.mynewbrand.net,mail.mynewbrand.net,203.121.67.132,OK,<info\@mynewbrand.com>,<ian\@daisymoo.com>
 
 BAD
 201-89-79-162.ctame700.dsl.brasiltelecom.net.br,201-89-79-162.ctame700.dsl.brasiltelecom.net.br,OK,ian\@dasiymoo.com,ian\@daisymoo.com
+host-196-205-239-96.static.link.com.eg,host-196.205.239.96.static.link.com.eg,196.205.239.96,FORGED,<ian\@daisymoo.com>,<ian\@daisymoo.com>
 TESTING
 
 copyright;
