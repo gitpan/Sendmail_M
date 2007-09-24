@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.24;
+$VERSION= 0.25;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.24 (early Beta)
+Version 0.25 (early Beta)
 Very much a work in progress.
 
 =head1 SYNOPSIS
@@ -143,6 +143,20 @@ added failed hosts to test data, to try and ensure it does not happen again.
 =item 0.24
 
 24 September 2007 CPAN Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 24
+
+Sept 2007, Patch required, spammer whose domain matched who they said they were, was not put through the numeric zombie check as expected, a Fix broke the intended logic, test data added to mail8.
+
+=back
+
+=item 0.25
+
+24 September 2007 CPAN Patch Release
 
 =back
 
@@ -1105,9 +1119,9 @@ TEST SANE(Local_check_relay)
 # also use lowest sensible value for paranoid
 TEST D({Paranoid}1)
 # 1st check normal legal external senders who have no special rights or needs
-TEST SANE(Local_check_mail) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE, V OK FROM)     
+TEST SANE(Local_check_mail) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE, F OK FROM)     
 # retest assuming sudo bounce (callback verify) which we have to tollarate to some degree
-TEST SANE(Local_check_mail) V(<>) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE)     
+TEST SANE(Local_check_mail) F(<>) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE)     
 # 2nd check senders who failed with the last release, and should still fail
 TEST SANE(Local_check_mail) AUTO(D; BAD; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE;, E BAD FROM)     
 # 3rd check our domain who should be able to do anthing
@@ -1235,21 +1249,21 @@ RULE
     dnl does the senders HELO resolve? dnl
     R £*            £: MACRO{ £1  # check HELO with client_name and then DNS
         OPTION MASH 1
-        TEST D({client_resolve}OK, {client_name}bogus.host.bogus, sbogus.host.bogus) V(bogus.host.bogus)
+        TEST D({client_resolve}OK, {client_name}bogus.host.bogus, sbogus.host.bogus) F(bogus.host.bogus)
         TEST D({client_resolve}FAIL, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
         TEST D({client_resolve}TEMP, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
         TEST D({client_resolve}FORGED, {client_addr}192.168.0.1, swww.celmorlauren.com) E(www.celmorlauren.com)
         R £*                    £: £&{client_resolve}
         R OK                    £: OK.£&{MashSelf}
         # HELO could be same as client_name
-        R OK.£&{client_name}    £@ £&{MashSelf}.OK       already known, no need to look up
+        R OK.£&{client_name}    £@ £&{client_addr}.FOUND     already known, no need to look up
         #
         R £*            £: £(Rlookup £&{MashSelf} £)      HELO host, DNS lookup needed
         R £+.FOUND      £@ MACRO{ £1    #  HELO resolves
             OPTION MASH 2
             TEST D({client_addr}192.168.0.1, {client_name}NA.192.168.0.1.NA, sNA.NA) F(192.168.0.1) E(10.0.0.1)
             R £&{client_addr}   £@ £&{MashSelf}.FOUND
-            REFUSED £#error £@ 5.1.8 £: "550 SPAMMER claimed to be: " £&s "with address:" £&{MashSelf}
+            REFUSED £#error £@ 5.1.8 £: "550 SPAMMER claimed to be: " £&s " with address:" £&{MashSelf}
         }MACRO
         #
         # HELO Failed to verify
@@ -1313,7 +1327,7 @@ RULE
     inbuilt_rule <<RULE;
 check_mail
 TEST SANE(Local_check_relay, Local_check_mail)
-TEST SANE(Local_check_mail) AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, V OK FROM)    
+TEST SANE(Local_check_mail) AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, F OK FROM)    
 TEST SANE(Local_check_mail) AUTO(D;BAD; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, E BAD FROM)    
 RULE
 }
