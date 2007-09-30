@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.25;
+$VERSION= 0.26;
 
 use Sendmail::M4::Utils;
 
@@ -20,14 +20,15 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.25 (early Beta)
-Very much a work in progress.
+Version 0.26 (Beta)
+    
+Now running at B<mail.celmorlauren.com> our own mail server, and has been doing so since 0.23
 
 =head1 SYNOPSIS
 
 SPAM consitutes the bulk of e-mail on the internet, many methods exist to fight this scurge, some better than others. However we think that this module is the simplest, quickest and most efective, relying as it does on the basic power of B<sendmail> macros for most of its methods.
 
-As all systems have an IP address and most have some sought of domain-name, it is possible to base the protection on wether the IP ties up with whom they claim to be at the <helo> stage. You can set B<sendmail> to be picky about this. But many peoples IP address does not resolve to what they would like, its easy to setup domain to IP via people like B<network associates>, but the other way round needs a friendy ISP. 
+As all systems have an IP address and most have some sought of domain-name, it is possible to base the protection on wether the IP ties up with whom they claim to be at the <helo> stage. You can set B<sendmail> to be picky about this. But many peoples IP address does not resolve to what they would like, its easy to setup domain to IP via people like B<network solutions>, but the other way round needs a friendy ISP. 
 So as this is a common problem, base the protection on the B<helo> resolving to their IP.
 
 Next check that their domain does not contain their IP encoded somehow, people who are not real MXs tend to have numeric user addresses, this has tuning to control how strict this is.
@@ -157,6 +158,49 @@ Sept 2007, Patch required, spammer whose domain matched who they said they were,
 =item 0.25
 
 24 September 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 25
+
+Sept 2007, HELO checking for {daemon_addr} added, should have there already (whoops sorry), however numeric addresses will not resolve anyway, so CPAN patch release delayed untill more serious problems encountered.
+Develelpment on B<test_cgi> will cause further amendments, so will wait for that before release.
+
+=item 30
+
+Sept 2007, ref to "network associates" changed to "network solutions", just been amending my "domains", so spotted the error, as I tend to look for them using google. Other typo's will be corrected when found.
+
+Noted rather more spam than normal has been arriving at my mail system, all fake MX's have been stopped as expected, but a few from Open Relays get through this (the 1st level filter), only to fail at the 2nd level email system. In an attempt to allow the 2nd level email system to sleep more, and only have to deal with real e-mail.
+
+=over 3
+
+=item 1
+
+Header B<From:> checked is the same as B<f> or at least contains B<f>. Failures are {Refused}, no exceptions all users are checked!
+
+=item 2
+
+Header B<Recieved:> check now sets {Refused} for failures. {GoodRelay} hosts are exempted from this check.
+
+=item 3
+
+Found during testing, that mail only worked once only! corrections made to ensure essential macros are set up again, and others use sendmail macros such as B<f> instead of supplied values, which may be the from address 1st time round, 2nd and more times it is (conneted as HOST & IP)?!
+
+=back
+
+=back
+
+=item 0.26
+
+30 September 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=back
 
 =back
 
@@ -300,12 +344,13 @@ Main items
     KRlookup            for DNS check on HELO host name
     H*: $>+ScreenHeader to check received headers
     KMath arith         to join the IP address together into a single token
+    KCleanFrom regex    to enable checking of Header line "From:"
 
-    KZombie program -t /etc/mail/mail8/mail8_zombie
+    KZombie program  /etc/mail/mail8/mail8_zombie
                         this is included in the script regardless 
-                        of wether it is installed or not
-                        and will be uploaded as part of this
-                        as soon as possible.
+                        of wether it is installed or not.
+                        Included as part of the distro, install it
+                        to get the full benifits.
 
 =back
 
@@ -328,6 +373,7 @@ ECHO
     echo <<ECHO;
 KRlookup dns -RA -a.FOUND -d5s -r4
 KMath arith
+KCleanFrom regex  -s1 (\(<.+>\)) 
 ECHO
 #mail8_zombie takes care of Zombie names that sendmail can not detect
     if ( -x "/etc/mail/mail8/mail8_zombie" )
@@ -342,7 +388,12 @@ Kmail4db hash -o -a.FOUND /etc/mail/mail8/mail4.db
 ECHO
 
 # we can do some checking with HEADER lines
-    echo "H*: £>+ScreenHeader";
+    echo <<ECHO
+
+HReceived: £>+ScreenHeader
+HFrom: £>+ScreenHeader
+
+ECHO
 
 }
 
@@ -961,6 +1012,8 @@ R £*            £: MACRO{ £1    # mail8 DB, check both name and IP
     R £*            £: £&{client_resolve}                   try name if it resolved
     R OK            £@ £>Screen_bad_relay £&{RelayName}     found it?
 }MACRO
+R £*            £: Check.FOUND
+R £*            £: £(SelfMacro {RelayChecked} £@ £1 £) £1
 RULE
 
 =pod
@@ -1119,16 +1172,16 @@ TEST SANE(Local_check_relay)
 # also use lowest sensible value for paranoid
 TEST D({Paranoid}1)
 # 1st check normal legal external senders who have no special rights or needs
-TEST SANE(Local_check_mail) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE, F OK FROM)     
+TEST SANE(Local_check_mail) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE; f FROM, F OK FROM)     
 # retest assuming sudo bounce (callback verify) which we have to tollarate to some degree
-TEST SANE(Local_check_mail) F(<>) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE)     
+TEST SANE(Local_check_mail) F(<>) AUTO(D; OK; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE; f FROM)     
 # 2nd check senders who failed with the last release, and should still fail
-TEST SANE(Local_check_mail) AUTO(D; BAD; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE;, E BAD FROM)     
+TEST SANE(Local_check_mail) AUTO(D; BAD; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE; f FROM;, E BAD FROM)     
 # 3rd check our domain who should be able to do anthing
 TEST SANE(GoodRelay)
-TEST SANE(Local_check_mail) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE;, F OUR FROM)     
+TEST SANE(Local_check_mail) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE; f FROM;, F OUR FROM)     
 # retest assuming sudo bounce (callback verify) which we have to tollarate to some degree
-TEST SANE(Local_check_mail) F(<>) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE)     
+TEST SANE(Local_check_mail) F(<>) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE; f FROM)     
 R £*            £: £&{Refused}      has this host already been refused?
 R £+.FOUND      £@ MACRO{ £1
     OPTION NOMASH
@@ -1146,8 +1199,19 @@ R £+.FOUND      £@ MACRO{ £1
     dnl record that this system is trying again dnl
     ALREADYREFUSED £#error £@ 5.1.8 £: "550 SPAMMER, GO AWAY! " £{mail8yhabr} " Next time you will be dropped!"
 }MACRO
-dnl restore original value dnl
-R £*            £: £&{MashSelf}
+# 2nd time around it has been found that sendmail clobbers macro values!
+R £*      £: MACRO{
+    OPTION NOMASH
+    TEST D({RelayChecked}done.FOUND,{client_name}localhost,{client_addr}127.0.0.1) F(NA)
+    TEST D({RelayChecked}done.not,{client_name}localhost,{client_addr}127.0.0.1) F(NA)
+    IS FOUND RelayChecked £@ £1
+    # Ok if here need to reset various macro names, essentially GoodRelay and BadRelay
+    R £*    £: £&{client_name}£|£&{client_addr}
+    R £*    £: £>Local_check_relay £1
+}MACRO
+# 1st time round we get FROM, 2nd time round we get the connected as HOST and IP?
+# so we must use f, as this will allways be as expected
+R £*            £: £&f
 R £*            £: MACRO{ £1
     OPTION NOMASH
     TEST SANE(Local_check_mail, BadRelay) E(you\@localhost)
@@ -1168,9 +1232,10 @@ R £*            £: MACRO{ £1
         R £*            £: MACRO{ £1 # check claimed host name against local names
             OPTION NOMASH
             TEST F(home.localhost, this.is.home.localhost)
-            R £* £=w               £@ £1.Local.FOUND
-            R £* £={VirtHost}      £@ £1.VirtHost.FOUND
-            R £* £=R               £@ £1.RelayDomain.FOUND
+            R £* £&{daemon_addr}    £@ £&{daemon_addr}.MyIP.FOUND
+            R £* £=w                £@ £1.Local.FOUND
+            R £* £={VirtHost}       £@ £1.VirtHost.FOUND
+            R £* £=R                £@ £1.RelayDomain.FOUND
 RULE
     if ( $mail8_setup->{'PerlHelpers'} )
     {
@@ -1225,9 +1290,10 @@ R £*        £: MACRO{ £1    # checking HELO
         dnl some just use their IP? no way can these be legal? dnl
         R £&{client_addr}   £@ £&{client_addr}.IP.FOUND
         dnl others claiming to be us? dnl
-        R £* £=w               £@ £1.Local.FOUND
-        R £* £={VirtHost}      £@ £1.VirtHost.FOUND
-        R £* £=R               £@ £1.RelayDomain.FOUND
+        R £* £&{daemon_addr}    £@ £&{daemon_addr}.MyIP.FOUND
+        R £* £=w                £@ £1.Local.FOUND
+        R £* £={VirtHost}       £@ £1.VirtHost.FOUND
+        R £* £=R                £@ £1.RelayDomain.FOUND
 RULE
     if ( $mail8_setup->{'PerlHelpers'} )
     {
@@ -1272,7 +1338,7 @@ RULE
         #
         R £*            £: £&{client_resolve}
         R TEMP          £#error £@ 4.1.8 £: "450 cannot resolve HELO host: " £&{MashSelf}
-        R £*            £#error £@ 5.1.8 £: "550 cannot resolve HELO host: " £&{MashSelf} "From: " £1 " Address"
+        R £*            £#error £@ 5.1.8 £: "550 cannot resolve HELO host: " £&{MashSelf} " From: " £1 " Address"
     }MACRO
     R £+.FOUND      £: £>ScreenDomain £1
 }MACRO
@@ -1327,8 +1393,8 @@ RULE
     inbuilt_rule <<RULE;
 check_mail
 TEST SANE(Local_check_relay, Local_check_mail)
-TEST SANE(Local_check_mail) AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, F OK FROM)    
-TEST SANE(Local_check_mail) AUTO(D;BAD; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE, E BAD FROM)    
+TEST SANE(Local_check_mail) AUTO(D;OK; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE; f FROM, F OK FROM)    
+TEST SANE(Local_check_mail) AUTO(D;BAD; s HELO; {client_addr} IP; {client_name} DOMAIN; {client_resolve} RESOLVE; f FROM, E BAD FROM)    
 RULE
 }
 
@@ -1471,7 +1537,25 @@ RULE
 
 HEADER LINES
 
-All this does at the moment is check the B<Received> header statment, some spammers pass other tests but show themselves by pretending to send from one of our domains! Other tests are possible. But on balance we think that these should be left to a 2nd level e-mail system that can take a closer look with both B<anti virus> and something like B<SpamAssassin>, it should be noted that these systems tend to be rather slow, so should never be run on a busy front line e-mail system under constant attack.
+All this does at the moment is check the following header statements
+
+B<Received:>
+
+=over 4 
+
+some spammers pass other tests but show themselves by pretending to send from one of our domains! 
+
+=back
+
+B<From:>
+
+=over 4
+
+B<ALL> users must conform, they must not B<FAKE> their "From:" header to show something other than the B<FROM> used in the mail discussion with the mail host. No exceptions! A considerable amount of SPAM comes from mailers that allow their users to send SPAM. It is in your own intrest to stop your users sending SPAM as you are very likly to be registered as a SPAMMER and be blocked by mail servers the world over.
+
+=back
+
+Other tests are possible. But on balance we think that these should be left to a 2nd level e-mail system that can take a closer look with both B<anti virus> and something like B<SpamAssassin>, it should be noted that these systems tend to be rather slow, so should never be run on a busy front line e-mail system under constant attack.
 If you wish additional rules may be supplied, these will be tacked on the end of the B<SScreenHeader> definition.
 
 =back
@@ -1488,19 +1572,19 @@ RULE
 GLOBAL A
 TEST SANE(Local_check_relay,Local_check_mail)
 R £*    £: MACRO{ £1
-    TEST D({hdr_name}NotReceived:) V(NA)
-    TEST D({hdr_name}Received:,{currHeader}na by localhost na) V(NA)
-    TEST D({hdr_name}Received:,{currHeader}na by your.localhost na) V(NA)
-    R £*            £: £&{GoodRelay}        local domains are OK
-    R £+.FOUND      £@ £1.FOUND
-    dnl others will need checking dnl
+    TEST D({hdr_name}NotReceived) V(NA)
+    TEST D({hdr_name}Received,{currHeader}na by localhost na) V(NA)
+    TEST D({hdr_name}Received,{currHeader}na by your.localhost na) V(NA)
     R £*            £: £&{hdr_name}
-    R Received:     £@ MACRO{ £&{currHeader}
+    R Received      £@ MACRO{ £&{currHeader}
         OPTION NOMASH
         TEST V(anon did not find this,bog standard mailer)
+        # internal systems should be ok
+        IS FOUND GoodRelay £@ £1
+        # external systems must be checked
         R £+by £+ £+        £: MACRO{ £2 # claiming to be one of our domains?
             OPTION MASH 2
-            TEST AUTO(E OUR HELO, V OK HELO)
+            TEST AUTO(F OUR HELO, V OK HELO)
             dnl localhost is to be expected, most liky as the first server? dnl
             R localhost         £@ £&{MashSelf}
             R £* localdomain    £@ £&{MashSelf}
@@ -1511,20 +1595,46 @@ R £*    £: MACRO{ £1
             R 172.16.£+         £@ £&{MashSelf}
             R 10.£+             £@ £&{MashSelf}
             dnl now check for our systems
-            R £* £=w               £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £&{MashSelf}
-            R £* £={VirtHost}      £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £&{MashSelf}
-            R £* £=R               £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £&{MashSelf}
+            R £* £=w               £@ £&{MashSelf}.FOUND
+            R £* £={VirtHost}      £@ £&{MashSelf}.FOUND
+            R £* £=R               £@ £&{MashSelf}.FOUND
 RULE
     if ( $mail8_setup->{'PerlHelpers'} )
     {
         $screen_header .= <<RULE;
             R £*                £: £(mail2db £1 £: £1 £)          mail2 DB
-            R £+.FOUND          £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £1
+            R £+.FOUND          £@ £&{MashSelf}.FOUND
             R £*                £: £(mail1db £1 £: £1 £)          mail1 DB
-            R £+.FOUND          £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £1
+            R £+.FOUND          £@ £&{MashSelf}.FOUND
 RULE
     }
     $screen_header .= <<RULE;
+        }MACRO
+        IS THISFOUND AND REFUSED £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £1
+    }MACRO
+    R From      £@ MACRO{ £&{currHeader}
+        OPTION NOMASH
+        # everyone using this system must conform, as even our own users may be guilty of trying to send spam
+        TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}Ian McNulty <ian\@daisymoo.com>) V(NA)
+        TEST D({mail_addr}ian\@daisymoo.com, fian\@daisymoo.com, {currHeader}Ian McNulty <ian\@daisy.com>) E(Not Local)
+        TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}"Ian McNulty"<ian\@daisy.com>) E(Local)
+        TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}Ian McNulty<ian\@daisy.com>) E(Local)
+        TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}<ian\@daisy.com>) E(Local)
+        TEST D({mail_addr}ian\@daisymoo.com, fian\@daisymoo.com, {currHeader}ian\@daisy.com) E(Not Local)
+        TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}ian\@daisymoo.com) V(NA)
+        R £*            £: £(CleanFrom £&{currHeader} £)    
+        R <£+>          £: £1
+        R £*            £@ MACRO{ £1
+            OPTION MASH 2
+            NOTEST AUTO
+            # if contains From should be ok
+            R £&f       £@ £&{MashSelf}
+            REFUSED
+            # is user external? in which case f & mail_addr will be the same
+            R £*        £: £&{mail_addr}
+            R £&f       £#error £@ 5.1.1 £: "553 SPAM? From: " £&f " claimed to be " £&{MashSelf} " from header line: (From: " £&{currHeader} " )"
+            # internal user, who needs their bottom smacked
+            R £*        £#error £@ 5.1.1 £: "553 SPAM? From: INTERNAL USER! " £&{mail_addr} " claimed to be " £&{MashSelf} " from header line: (From: " £&{currHeader} " )"
         }MACRO
     }MACRO
 RULE
