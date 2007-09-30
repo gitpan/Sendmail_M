@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.26;
+$VERSION= 0.27;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.26 (Beta)
+Version 0.27 (Beta)
     
 Now running at B<mail.celmorlauren.com> our own mail server, and has been doing so since 0.23
 
@@ -193,6 +193,20 @@ Found during testing, that mail only worked once only! corrections made to ensur
 =back
 
 =item 0.26
+
+30 September 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 30
+
+Sept 2007, noted that the B<Pause> upload server falls foul of the just uploaded system, so the B<mail4.db> will now permit those listed to skip all checks, however local users will not be allowed to skip mail FROM checks.
+
+=back
+
+=item 0.27
 
 30 September 2007 CPAN Patch Release
 
@@ -1033,7 +1047,7 @@ uses Macro B<Screem_bad_relay> (GLOBAL B) to do the main checking
 mail8 amd mail9 checks result im $#error
 
 Being found does not mean that the host is a BadRelay, just that it will need handling differently to other hosts.
-Hosts recorded as being GoodRelay are also in BadRelay.
+Hosts recorded as being GoodRelay.
 
 =back
 
@@ -1070,7 +1084,6 @@ RULE
     R 127.£+            £@ £&{MashSelf}.Private.FOUND
 }MACRO
 FOUND GoodRelay     found? then is one of our domains
-FOUND BadRelay      found? then save here as well
 R £+.FOUND      £@ £1.FOUND    ok one of our domains
 RULE
     if ( scalar $mail8_setup->{'PerlHelpers'} )
@@ -1622,6 +1635,8 @@ RULE
         TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}<ian\@daisy.com>) E(Local)
         TEST D({mail_addr}ian\@daisymoo.com, fian\@daisymoo.com, {currHeader}ian\@daisy.com) E(Not Local)
         TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}ian\@daisymoo.com) V(NA)
+        # problem systems such as CPAN Pause, which we want to receive mail from
+        IS FOUND BadRelay £@ £1
         R £*            £: £(CleanFrom £&{currHeader} £)    
         R <£+>          £: £1
         R £*            £@ MACRO{ £1
