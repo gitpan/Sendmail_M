@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.27;
+$VERSION= 0.28;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.27 (Beta)
+Version 0.28 (Beta)
     
 Now running at B<mail.celmorlauren.com> our own mail server, and has been doing so since 0.23
 
@@ -214,6 +214,22 @@ B<Amendments to release version>
 
 =over 3
 
+01
+
+Oct 2007, sendmail needs more free "long names" for its own use, this had been using only 21 "long names", Sendmail::M4::Utils has been modified to provide routines that can use just one "long name" {MashFound}, so this will be recoded as required as the {macros} used before can no longer be direcltly accessed. Total saving minus 5, leaving 16.
+
+Also found 2 other names, that did not need persistance, these now MashTempC & D
+
+=back
+
+=item 0.28
+
+02 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
 =back
 
 =back
@@ -286,6 +302,9 @@ sub mail8_setup
                            install=>1, 
                            test=>1, 
                            @_;
+# decalare items to be used with packed maceo {MashFound} this is a "long names" conservation method
+# one name instead of many
+    define_MashFound qw(RelayChecked GoodRelay BadRelay Refused AlreadyRefused Bounce);
     return $mail8_setup;
 }
 
@@ -989,12 +1008,14 @@ ECHO
     sane <<SANE;
 GoodRelay
 {GoodRelay}this.one.FOUND, {BadRelay}this.one.FOUND
+{RelayChecked}done.FOUND
 {client_resolve}OK
 SANE
     sane <<SANE;
 BadRelay
 {BadRelay}this.one.FOUND
 {GoodRelay}notset.clear
+{RelayChecked}done.FOUND
 SANE
     sane <<SANE;
 Local_check_relay
@@ -1012,22 +1033,25 @@ TEST D({client_resolve}FAIL)
 TEST SANE(Local_check_relay) T(Translate) V(bogus.bogus 721.0.0.1)
 R £*            £: MACRO{ £1    # mail8 DB, check both name and IP
     NOTEST AUTO Local_check_relay wraps this entirely, mail8 will block access
-    R £* £| £*      £: £(SelfMacro {RelayName} £@ £1 £) £1 £| £2
-    R £* £| £*      £: £(SelfMacro {RelayIP} £@ £2 £) £1 £| £2
+    R £* £| £*      £: £(SelfMacro {MashTempC} £@ £1 £) £1 £| £2
+    R £* £| £*      £: £(SelfMacro {MashTempD} £@ £2 £) £1 £| £2
+    dnl init {MashFound} or it will not work
+    R £*            £: £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 
+    R £*            £: £(SelfMacro {MashFound} £@ £1 £) £1
     dnl sendmail's own tables wrap IP in square brackets dnl
-    R £*            £: £&{RelayIP}                          try IP
+    R £*            £: £&{MashTempD}                          try IP
     R £*            £: [ £1 ]                               wrap with brackets
     R £*            £: £>Screen_bad_relay £1
     R £+.FOUND      £@ £1.FOUND                             found IP
     dnl now try IP as is, may be found in mail8 db? dnl
-    R £*            £: £>Screen_bad_relay £&{RelayIP}       try IP
+    R £*            £: £>Screen_bad_relay £&{MashTempD}       try IP
     R £+.FOUND      £@ £1.FOUND                             found IP
     dnl now try domain name
     R £*            £: £&{client_resolve}                   try name if it resolved
-    R OK            £@ £>Screen_bad_relay £&{RelayName}     found it?
+    R OK            £@ £>Screen_bad_relay £&{MashTempC}     found it?
 }MACRO
 R £*            £: Check.FOUND
-R £*            £: £(SelfMacro {RelayChecked} £@ £1 £) £1
+STORE RelayChecked
 RULE
 
 =pod
@@ -1172,6 +1196,7 @@ sub local_check_mail
 {
     sane <<SANE;
 Local_check_mail
+{RelayChecked}ok.FOUND    
 {Refused}ok.clear
 {AlreadyRefused}ok.clear
 {Bounce}ok.clear
@@ -1200,7 +1225,7 @@ R £+.FOUND      £@ MACRO{ £1
     OPTION NOMASH
     TEST D({Refused}991.2.3.4) E(991.2.3.4, blah.blah)
     TEST D({AlreadyRefused}994.3.2.1.FOUND) E(994.3.2.1)
-    R £*            £: £&{AlreadyRefused}     refused more than once?
+    FIND AlreadyRefused     refused more than once?
     R £+.FOUND      £: MACRO{
         OPTION NOMASH
         TEST E(nogin.the.nog)
@@ -1271,7 +1296,7 @@ RULE
     IS FOUND Bounce AND REFUSED £#error £@ 5.1.8 £: "553 Multiple BOUNCES are not allowed, GO AWAY, (Empty From <> address): " £&s
     dnl OK have not bounced before dnl
     R £*                £: £1.FOUND
-    R £*                £: £(SelfMacro {Bounce} £@ £1 £) £1
+    STORE Bounce
     dnl empty address, either a "callback verify" or a real bounce dnl
     R £*    £: £&{Paranoid}
     R 0     £@ 0       Not paranoid
@@ -1444,9 +1469,8 @@ R £*            £: MACRO{ £1 # first check wether sender is local
     TEST D({rcpt_host}notlocalhost, {Paranoid}2) E(na\@localhost)
     TEST D({rcpt_host}notlocalhost, {Paranoid}3) O(na\@localhost)
     TEST SANE(Local_check_relay, Local_check_mail)
-    R £*            £: £&{GoodRelay}        local domains are OK
-    R £+.FOUND      £@ £1.FOUND
-    R £*            £: £&{BadRelay}         relays with problems, more checking needed
+    IS FOUND GoodRelay £@ £1.FOUND
+    FIND BadRelay         relays with problems, more checking needed
     R £+.FOUND      £@ MACRO{ £1
         OPTION NOMASH
         TEST D({rcpt_addr}match.this) V(match.this.mail3) E(not.this.mail3)
@@ -1457,7 +1481,7 @@ R £*            £: MACRO{ £1 # first check wether sender is local
             R £*                £@ £>ScreenMail8blocker £{mail3tt}
         }MACRO
     }MACRO
-    R £*            £: £&{Bounce}
+    FIND Bounce
     R £+.FOUND      £@ MACRO{ £1
         OPTION NOMASH
         TEST D({Paranoid}2, {rcpt_host}localhost) O(localhost)
@@ -1529,7 +1553,7 @@ TEST D({Paranoid}1) E(na)
 TEST D({GoodRelay}is.FOUND) F(na)
 TEST SANE(Local_check_relay, Local_check_mail)
 TEST D({Paranoid}0)
-R £*            £: £&{Bounce}
+FIND Bounce
 R £+.FOUND      £: MACRO{ £1
     TEST D({Paranoid}0, {GoodRelay}is.FOUND) V(NA)
     TEST D({Paranoid}1, {GoodRelay}is.FOUND) F(NA)
@@ -1537,7 +1561,7 @@ R £+.FOUND      £: MACRO{ £1
     TEST D({Paranoid}1, {GoodRelay}is.not) E(NA)
     R £*            £: £&{Paranoid}
     R 0             £@ 0
-    IS FOUND GoodRelay £@ £&{GoodRelay}
+    IS FOUND GoodRelay £@ £1
     dnl all other values for Paranoid will not accept bounces from strangers dnl
     REFUSED £#error £@ 5.1.8 £: "550 SPAM BOUNCES ARE REFUSED, WE DO NOT KNOW YOU, GO AWAY"
 }MACRO
