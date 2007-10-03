@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.29;
+$VERSION= 0.30;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.29 (Beta)
+Version 0.30 (Beta)
     
 Now running at B<mail.celmorlauren.com> our own mail server, and has been doing so since 0.23
 
@@ -244,6 +244,26 @@ B<Amendments to release version>
 
 =over 3
 
+=item 03
+
+Oct 2007, the Received: header checking does not work, and currently nothing tried makes it work, fine in test mode. But as headers are not tokenised with sendmail 8.13, can not do anthing usefull with the supplied tools.
+
+So currently does nothing, just returns.
+
+Fix must wait for Sendmail::M4::mail8_daemon and its worker module Sendmail::M4::Mail8_daemon.pm, which will now do more than originally designed to do.
+
+Patch required to remove useless error messages from the logs.
+
+=back
+
+=item 0.30
+
+03 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
 =back
 
 =back
@@ -420,8 +440,9 @@ ECHO
     echo <<ECHO;
 KRlookup dns -RA -a.FOUND -d5s -r4
 KMath arith
-KCleanToken regex  -s1 (.+) 
+dnl KCleanToken regex  -s1 ([[:print:]]+) dnl 
 KCleanFrom regex  -s1 ([[:alnum:]]+\@[[:alnum:]\.]+) 
+dnl KCleanReceived regex -s1 (\<by\>[[:blank:]]+[[:alnum:]\.]+) dnl
 ECHO
 #mail8_zombie takes care of Zombie names that sendmail can not detect
     if ( -x "/etc/mail/mail8/mail8_zombie" )
@@ -1625,17 +1646,21 @@ GLOBAL A
 TEST SANE(Local_check_relay,Local_check_mail)
 R £*    £: MACRO{ £1
     TEST D({hdr_name}NotReceived) V(NA)
-    TEST D({hdr_name}Received,{currHeader}na by localhost na) V(NA)
-    TEST D({hdr_name}Received,{currHeader}na by your.localhost na) V(NA)
+    TEST D({hdr_name}Received,{currHeader}na by localhost na and "not so much") V(NA)
+    TEST D({hdr_name}Received,{currHeader}na by your.localhost na yack yack end) V(NA)
     R £*            £: £&{hdr_name}
     R Received      £@ MACRO{ £&{currHeader}
         OPTION NOMASH
-        TEST V(anon did not find this,bog standard mailer)
+        TEST D({currHeader}na by www.celmorlauren.com na) V(anon did not find this,bog standard mailer)
         # internal systems should be ok
-        IS FOUND GoodRelay £@ £1
-        R £*                £: £(CleanToken £&{currHeader} £)    
+# does not work, will have to omit untill mail8_daemon can take over this bit of checking
+# as stuff is not tokenised what works in test mode does not work live!
+        R £*                £@ £1
+#IS FOUND GoodRelay £@ £1
+#R £*                £: £(CleanReceived £&{currHeader} £)    
+#R £*    £#error £@ 5.1.1 £: "553 DEBUG " £1
         # external systems must be checked
-        R £+by £+ £+        £: MACRO{ £2 # claiming to be one of our domains?
+        R £* by £+          £: MACRO{ £2 # claiming to be one of our domains?
             OPTION MASH 2
             TEST AUTO(F OUR HELO, V OK HELO)
             dnl localhost is to be expected, most liky as the first server? dnl
