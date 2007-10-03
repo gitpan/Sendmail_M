@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.28;
+$VERSION= 0.29;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.28 (Beta)
+Version 0.29 (Beta)
     
 Now running at B<mail.celmorlauren.com> our own mail server, and has been doing so since 0.23
 
@@ -214,7 +214,7 @@ B<Amendments to release version>
 
 =over 3
 
-01
+=item 01
 
 Oct 2007, sendmail needs more free "long names" for its own use, this had been using only 21 "long names", Sendmail::M4::Utils has been modified to provide routines that can use just one "long name" {MashFound}, so this will be recoded as required as the {macros} used before can no longer be direcltly accessed. Total saving minus 5, leaving 16.
 
@@ -225,6 +225,20 @@ Also found 2 other names, that did not need persistance, these now MashTempC & D
 =item 0.28
 
 02 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 03
+
+Oct 2007 noticed that header line "From:" where email address not included in E<lt> E<gt> brackets, will not match when should.
+
+=back
+
+=item 0.29
+
+03 October 2007 CPAN Patch Release
 
 B<Amendments to release version>
 
@@ -406,7 +420,8 @@ ECHO
     echo <<ECHO;
 KRlookup dns -RA -a.FOUND -d5s -r4
 KMath arith
-KCleanFrom regex  -s1 (\(<.+>\)) 
+KCleanToken regex  -s1 (.+) 
+KCleanFrom regex  -s1 ([[:alnum:]]+\@[[:alnum:]\.]+) 
 ECHO
 #mail8_zombie takes care of Zombie names that sendmail can not detect
     if ( -x "/etc/mail/mail8/mail8_zombie" )
@@ -1618,6 +1633,7 @@ R £*    £: MACRO{ £1
         TEST V(anon did not find this,bog standard mailer)
         # internal systems should be ok
         IS FOUND GoodRelay £@ £1
+        R £*                £: £(CleanToken £&{currHeader} £)    
         # external systems must be checked
         R £+by £+ £+        £: MACRO{ £2 # claiming to be one of our domains?
             OPTION MASH 2
