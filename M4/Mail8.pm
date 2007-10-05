@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.30;
+$VERSION= 0.31;
 
 use Sendmail::M4::Utils;
 
@@ -20,7 +20,7 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.30 (Beta)
+Version 0.31 (Beta)
     
 Now running at B<mail.celmorlauren.com> our own mail server, and has been doing so since 0.23
 
@@ -264,6 +264,20 @@ B<Amendments to release version>
 
 =over 3
 
+=item 05
+
+Oct 2007, noted that dots and dashs did not work in From: header checker for names, fixed. However underscores  will still not work
+
+=back
+
+=item 0.31
+
+05 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
 =back
 
 =back
@@ -441,7 +455,7 @@ ECHO
 KRlookup dns -RA -a.FOUND -d5s -r4
 KMath arith
 dnl KCleanToken regex  -s1 ([[:print:]]+) dnl 
-KCleanFrom regex  -s1 ([[:alnum:]]+\@[[:alnum:]\.]+) 
+KCleanFrom regex  -s1 ([[:alnum:]_\.\-]+\@[[:alnum:]\.\-]+) 
 dnl KCleanReceived regex -s1 (\<by\>[[:blank:]]+[[:alnum:]\.]+) dnl
 ECHO
 #mail8_zombie takes care of Zombie names that sendmail can not detect
@@ -1700,6 +1714,8 @@ RULE
         TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}<ian\@daisy.com>) E(Local)
         TEST D({mail_addr}ian\@daisymoo.com, fian\@daisymoo.com, {currHeader}ian\@daisy.com) E(Not Local)
         TEST D({mail_addr}ian, fian\@daisymoo.com, {currHeader}ian\@daisymoo.com) V(NA)
+        TEST D({mail_addr}i.a-n, fi.a-n\@daisy-moo.com, {currHeader}i.a-n\@daisy-moo.com) V(NA)
+        TEST D({mail_addr}i.a_n, fi.a_n\@daisy-moo.com, {currHeader}i.a_n\@daisy-moo.com) V(NA)
         # problem systems such as CPAN Pause, which we want to receive mail from
         IS FOUND BadRelay £@ £1
         R £*            £: £(CleanFrom £&{currHeader} £)    
