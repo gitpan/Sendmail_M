@@ -278,6 +278,21 @@ B<Amendments to release version>
 
 =over 3
 
+=item 08 Oct 2007,
+
+Noted that lots of SPAM has Reply-to: yahoo or hotmail, system will now check sendmails standard B<access> database for B<From:####> where #### is system we do not accept mail from. SPAMMERS are now concentrating on finding open-relays or other poorly setup and vunerable systems, many of which seem to be B<Exim> servers. These are of course blocked on their third SPAM or sometimes on their first if they are an open-relay. SPAM detection being done by the second level e-mail system, the CPAN version of the interface between the two systems is currently being re-writen, and we will make it available soon.
+
+=back
+
+=item 0.32
+
+08 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+
 =back
 
 =back
@@ -433,6 +448,13 @@ Main items
                         Included as part of the distro, install it
                         to get the full benifits.
 
+    dnl white list      no other way to to let these past
+    Kmail4db hash -o -a.FOUND /etc/mail/mail8/mail4.db
+
+    Standard black list, checked at Reply-to: Header
+    dnl standard black list
+    Kstdaccessdb hash -o -a.FOUND /etc/mail/access.db
+
 =back
 
 =cut
@@ -451,12 +473,16 @@ ECHO
 
     LOCAL_CONFIG;
 
+#some bits that still do not work
+# KCleanToken regex  -s1 ([[:print:]]+)
+# KCleanReceived regex -s1 (\<by\>[[:blank:]]+[[:alnum:]\.]+) 
+
     echo <<ECHO;
 KRlookup dns -RA -a.FOUND -d5s -r4
 KMath arith
-dnl KCleanToken regex  -s1 ([[:print:]]+) dnl 
 KCleanFrom regex  -s1 ([[:alnum:]_\.\-]+\@[[:alnum:]\.\-]+) 
-dnl KCleanReceived regex -s1 (\<by\>[[:blank:]]+[[:alnum:]\.]+) dnl
+KCleanAtHost regex  -s1 (\@[[:alnum:]\.\-]+) 
+KCleanHost regex  -s1 ([[:alnum:]\.\-]+) 
 ECHO
 #mail8_zombie takes care of Zombie names that sendmail can not detect
     if ( -x "/etc/mail/mail8/mail8_zombie" )
@@ -468,13 +494,16 @@ ECHO
     echo <<ECHO;
 dnl white list
 Kmail4db hash -o -a.FOUND /etc/mail/mail8/mail4.db
+dnl standard black list
+Kstdaccessdb hash -o -a.FOUND /etc/mail/access.db
 ECHO
 
 # we can do some checking with HEADER lines
+#HReceived: £>+ScreenHeader
     echo <<ECHO
 
-HReceived: £>+ScreenHeader
 HFrom: £>+ScreenHeader
+HReply-to: £>+ScreenHeader
 
 ECHO
 
@@ -1719,20 +1748,33 @@ RULE
         # problem systems such as CPAN Pause, which we want to receive mail from
         IS FOUND BadRelay £@ £1
         R £*            £: £(CleanFrom £&{currHeader} £)    
-        R <£+>          £: £1
-        R £*            £@ MACRO{ £1
-            OPTION MASH 2
-            NOTEST AUTO
-            # if contains From should be ok
-            R £&f       £@ £&{MashSelf}
-            REFUSED
-            # is user external? in which case f & mail_addr will be the same
-            R £*        £: £&{mail_addr}
-            R £&f       £#error £@ 5.1.1 £: "553 SPAM? From: " £&f " claimed to be " £&{MashSelf} " from header line: (From: " £&{currHeader} " )"
-            # internal user, who needs their bottom smacked
-            R £*        £#error £@ 5.1.1 £: "553 SPAM? From: INTERNAL USER! " £&{mail_addr} " claimed to be " £&{MashSelf} " from header line: (From: " £&{currHeader} " )"
-        }MACRO
+        R £*            £: £(SelfMacro {MashTempC} £@ £1 £) £1
+        # if contains From should be ok
+        R £&f       £@ £&{MashTempC}
+        REFUSED
+        # is user external? in which case f & mail_addr will be the same
+        R £*        £: £&{mail_addr}
+        R £&f       £#error £@ 5.1.1 £: "553 SPAM? From: " £&f " claimed to be " £&{MashTempC} " from header line: (From: " £&{currHeader} " )"
+        # internal user, who needs their bottom smacked
+        R £*        £#error £@ 5.1.1 £: "553 SPAM? From: INTERNAL USER! " £&{mail_addr} " claimed to be " £&{MashTempC} " from header line: (From: " £&{currHeader} " )"
     }MACRO
+    R Reply-to     £@ MACRO{ £&{currHeader}
+        OPTION NOMASH
+        NOTEST AUTO
+        # problem systems such as CPAN Pause, which we want to receive mail from
+        IS FOUND BadRelay £@ £1
+        R £*            £: £(CleanFrom £&{currHeader} £)    
+        R £*            £: £(SelfMacro {MashTempC} £@ £1 £) £1
+        R £*            £: From:£1
+        R £*            £: £(stdaccessdb £1 £: £1 £)          standard access database
+        IS THISFOUND AND REFUSED £#error £@ 5.1.1 £: "553 SPAM REFUSED ! From: " £&f " used a Reply-to: address of " £&{MashTempC} " from header line: (Reply-to: " £&{currHeader} " )"
+        R £*            £: £&{MashTempC}
+        R £*            £: £(CleanAtHost £1 £)    
+        R £*            £: £(CleanHost £1 £)    
+        R £*            £: £(SelfMacro {MashTempD} £@ £1 £) £1
+        R £*            £: From:£1
+        R £*            £: £(stdaccessdb £1 £: £1 £)          standard access database
+        IS THISFOUND AND REFUSED £#error £@ 5.1.1 £: "553 SPAM REFUSED ! From: " £&f " used a Reply-to: address of " £&{MashTempD} " from header line: (Reply-to: " £&{currHeader} " )"
 RULE
 
     rule "SScreenHeader", $screen_header,@extra;

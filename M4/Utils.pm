@@ -9,7 +9,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.24;
+$VERSION= 0.25;
 
 use IO::File;
 use IO::Select;
@@ -25,7 +25,7 @@ Sendmail::M4::Utils - create and test sendmail M4 hack macro files
 
 =head1 STATUS
 
-Version 0.24 (Beta)
+Version 0.25 (Beta)
 
 This compiles the M4 sendmail hack used by celmorlauren since version 0.23
 
@@ -276,6 +276,10 @@ Modifications made so that {macro} maybe used for TEST D & SANE statments, but w
 B<Amendments to release version>
 
 =over 3
+
+=item 08
+
+Oct 2007, error in B<pod> line 960 space between =head 2, as B<Mail8> has been updated with B<Reply-to> header line checking, this little thing can be fixed and uploaded.
 
 =back
 
@@ -957,7 +961,7 @@ sub dnl
 # rule
 #####################
 
-=head 2 define_MashFound @_
+=head2 define_MashFound @_
 
 =over 4
 
