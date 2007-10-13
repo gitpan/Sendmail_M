@@ -10,7 +10,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.31;
+$VERSION= 0.33;
 
 use Sendmail::M4::Utils;
 
@@ -20,13 +20,169 @@ Sendmail::M4::Mail8 - Stop fake MX and most spammers, sendmail M4 hack file
 
 =head1 STATUS
 
-Version 0.31 (Beta)
+Version 0.33 (Beta)
     
 Now running at B<mail.celmorlauren.com> our own mail server, and has been doing so since 0.23
 
 =head1 SYNOPSIS
 
 SPAM consitutes the bulk of e-mail on the internet, many methods exist to fight this scurge, some better than others. However we think that this module is the simplest, quickest and most efective, relying as it does on the basic power of B<sendmail> macros for most of its methods.
+
+=head2 METHOD OF PROTECTION
+
+=over 4
+
+=item 1
+
+=over 4
+
+=item Local_check_relay
+
+=over 4
+
+=item {GoodRelay}
+
+Local system, local private IP address, contained in B<w>, B<{VirtHost}>, B<R>, B<mail1.db> and B<mail2.db>. 
+
+Generally exempted from tests, except for B<From:> and B<Reply-to:>
+
+=item {BadRelay}
+
+External system, that fails one or more tests, and you want to receive mail from, these must be contained by B<mail4.db>
+
+Generally exempted from tests, except for B<Received:>
+
+=item {Refused}
+
+External systems that are not allowed to send e-mail.
+
+=over 4
+
+Currently requires additional Perl helpers that are not included in the CPAN distribution.
+
+For basic protection use the standard sendmail B<access> database.
+
+=back
+
+=back
+
+=item Local_check_mail
+
+=over 4
+
+=item *
+
+Only {GoodRely} may have a B<f> domain-name part that is local to this system.
+
+=item *
+
+{Bounce} B<f> of E<lt>E<gt>, only permitted on {Paranoid} values of 3 or less.
+
+=item *
+
+All hosts B<s>|(HELO), apart from {GoodRelay} and {BadRelay}, must
+
+=over 4
+
+=item *
+
+Not pretend to be one of our domains or a local private IP address.
+
+=item *
+
+Must either be the same as {client_name} or resolve to be the same as {client_addr}.
+
+=item *
+
+B<f>|(FROM:) domains names containing B<yahoo> or B<hotmail> may only come from MX systems containing these names, also the B<Reply-to:> must either not exist or not differ.
+
+=item *
+
+Not contain more than 2 parts of their {client_addr} IP address encoded within their domain name,
+or be overly numeric.
+
+This traps the bulk of B<zombie> spammers. 
+
+Traps pessimists like B<hotmail> as well, as they use very numeric MX mail relays. As I do not know of anyone who uses B<hotmail>, nothing this end will be done about it. It is upto <hotmail> to have confidence in the mail they are relaying, and hence use clearer MX domain names.
+
+=back
+
+=back
+
+=back
+
+=item 2
+
+=over 4
+
+=item Local_check_rcpt
+
+=over 4
+
+=item {Bounce}
+
+{Bounce} delt with depending on {Paranoid}, many are B<callback verify> requests an unhelpfull sudo bounce that some other anti-spam systems have adopted.
+
+A level of 3 says OK to anything (even domains not hosted here)! Systems that waste our time with dubious rubbish like B<callback verify> deserve to get rubbish back.
+
+=item *
+
+B<mail3> trouble ticket, one shot e-mail allowed from web-site will be delt with here.
+
+=back
+
+=back
+
+=item 3
+
+=over 4
+
+=item check_data
+
+Only with {Paranoid} of 0 will any {Bounce} with data be accepted!
+
+=back
+
+=item 4
+
+=over 4
+
+=item screen_header
+
+=over 4
+
+=item From:
+
+Must be the same as b<f>, much SPAM uses a From: of yahoo or hotmail or some other mail address in a attempt to evade the B<local_check_mail> tests. Also as only {BadRelay} is exempted it traps your own users who are trying to send out as someone else, or perhaps has become a B<zombie>.
+
+=item Reply-to:
+
+Not permitted for yahoo or hotmail domains, otherwise must be the same domain as B<f>
+
+=item Received:
+
+=over 4
+
+=item by
+
+Detection of B<fake> headers, spammers often included faked headers perporting to come from one of your own domains.
+
+=item with HTTP
+
+Web-mail is so insecure and open to abuse by spammers, that with a {Paranoid} setting of 2 and above it will be refused.
+
+
+=back
+
+=back
+
+=back
+
+=back
+
+=head2 GENERAL
+
+=over 4
 
 As all systems have an IP address and most have some sought of domain-name, it is possible to base the protection on wether the IP ties up with whom they claim to be at the <helo> stage. You can set B<sendmail> to be picky about this. But many peoples IP address does not resolve to what they would like, its easy to setup domain to IP via people like B<network solutions>, but the other way round needs a friendy ISP. 
 So as this is a common problem, base the protection on the B<helo> resolving to their IP.
@@ -49,253 +205,6 @@ This module is non OO, and exports the methods descriped under EXPORTS.
 Ian McNulty, celmorlauren limited (registered in England & Wales 5418604). 
 
 email E<lt>development@celmorlauren.comE<gt>
-
-=head1 HISTORY
-
-B<Versions>
-
-=over 5
-
-=item 0.1
-
-Nov 2006    1st version, pure sendmail M4 hack, using plug-in Perl programs.
-
-=item 0.2
-
-25 August, this 1st CPAN M4 hack script, original script split into, this B<Mail8> and B<Utils> for creation and testing.
-
-21 Sept 2007 Released onto CPAN. 
-
-B<Amendments to release version>
-
-Most changes are recorded in B<Utils> as this really was a messy hack conversion, with many revisions required to get something that worked.
-
-=over 3
-
-=item 22
-
-Sept 2007, added this HISTORY
-
-mail8 DataBase file refrences (apart from B<mail4>) have been removed, and will now only added if the {Perl_Helpers} have been installed, currently these scripts are not available, their future will be decided later.
-
-mail8_zombie now included in distro, install it to get the full benifits
-
-=back
-
-=item 0.21
-
-22 September 2007 CPAN Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 23
-
-September 2007 B<sendmail> works fine in command line test mode. But complains of "too many long names" when this is installed and run, "sendmail" assigns on the "fly" macro names!????!!!!?.
-
-A limit of 96 (8 Bit limits?) is really too constrictive.
-
-=over 3
-
-=item *
-
-1st try now using {MashTemp} instead of {MashStack}, saves some, so sendmail falls over a little later!
-
-=item *
-
-OPTION NOMASH used where possible, also "OPTION MASH 1" to conserve name space in other places, this and changes to B<Utils> have removed 20 names
-
-=back
-
-=back
-
-=item 0.22
-
-23 September 2007 CPAN Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 23
-
-Sept 2007, on SuSE 10.1 (remastered) sendmail version 8.13.6, complained of an unbalanced E<gt>, not the fault of the sender but a macro? why did sendmail then decide to 553???, had no problem with the same code on SuSE 9.3 sendmail 8.13.3?
-
-So a single line added and hopefully all will be well, and this system can finally protect celmorlauren, we suffer quite a lot of spam, so we should be able to spot any other weakness in the code.
-
-=back
-
-=item 0.23
-
-23 September 2007 CPAN Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 24
-
-Sept 2007, it appears we have caused a problem with the changes above, HELO's are failing when they should not.
-added failed hosts to test data, to try and ensure it does not happen again.
-
-=back
-
-=item 0.24
-
-24 September 2007 CPAN Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 24
-
-Sept 2007, Patch required, spammer whose domain matched who they said they were, was not put through the numeric zombie check as expected, a Fix broke the intended logic, test data added to mail8.
-
-=back
-
-=item 0.25
-
-24 September 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 25
-
-Sept 2007, HELO checking for {daemon_addr} added, should have there already (whoops sorry), however numeric addresses will not resolve anyway, so CPAN patch release delayed untill more serious problems encountered.
-Develelpment on B<test_cgi> will cause further amendments, so will wait for that before release.
-
-=item 30
-
-Sept 2007, ref to "network associates" changed to "network solutions", just been amending my "domains", so spotted the error, as I tend to look for them using google. Other typo's will be corrected when found.
-
-Noted rather more spam than normal has been arriving at my mail system, all fake MX's have been stopped as expected, but a few from Open Relays get through this (the 1st level filter), only to fail at the 2nd level email system. In an attempt to allow the 2nd level email system to sleep more, and only have to deal with real e-mail.
-
-=over 3
-
-=item 1
-
-Header B<From:> checked is the same as B<f> or at least contains B<f>. Failures are {Refused}, no exceptions all users are checked!
-
-=item 2
-
-Header B<Recieved:> check now sets {Refused} for failures. {GoodRelay} hosts are exempted from this check.
-
-=item 3
-
-Found during testing, that mail only worked once only! corrections made to ensure essential macros are set up again, and others use sendmail macros such as B<f> instead of supplied values, which may be the from address 1st time round, 2nd and more times it is (conneted as HOST & IP)?!
-
-=back
-
-=back
-
-=item 0.26
-
-30 September 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 30
-
-Sept 2007, noted that the B<Pause> upload server falls foul of the just uploaded system, so the B<mail4.db> will now permit those listed to skip all checks, however local users will not be allowed to skip mail FROM checks.
-
-=back
-
-=item 0.27
-
-30 September 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 01
-
-Oct 2007, sendmail needs more free "long names" for its own use, this had been using only 21 "long names", Sendmail::M4::Utils has been modified to provide routines that can use just one "long name" {MashFound}, so this will be recoded as required as the {macros} used before can no longer be direcltly accessed. Total saving minus 5, leaving 16.
-
-Also found 2 other names, that did not need persistance, these now MashTempC & D
-
-=back
-
-=item 0.28
-
-02 October 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 03
-
-Oct 2007 noticed that header line "From:" where email address not included in E<lt> E<gt> brackets, will not match when should.
-
-=back
-
-=item 0.29
-
-03 October 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 03
-
-Oct 2007, the Received: header checking does not work, and currently nothing tried makes it work, fine in test mode. But as headers are not tokenised with sendmail 8.13, can not do anthing usefull with the supplied tools.
-
-So currently does nothing, just returns.
-
-Fix must wait for Sendmail::M4::mail8_daemon and its worker module Sendmail::M4::Mail8_daemon.pm, which will now do more than originally designed to do.
-
-Patch required to remove useless error messages from the logs.
-
-=back
-
-=item 0.30
-
-03 October 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 05
-
-Oct 2007, noted that dots and dashs did not work in From: header checker for names, fixed. However underscores  will still not work
-
-=back
-
-=item 0.31
-
-05 October 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-=item 08 Oct 2007,
-
-Noted that lots of SPAM has Reply-to: yahoo or hotmail, system will now check sendmails standard B<access> database for B<From:####> where #### is system we do not accept mail from. SPAMMERS are now concentrating on finding open-relays or other poorly setup and vunerable systems, many of which seem to be B<Exim> servers. These are of course blocked on their third SPAM or sometimes on their first if they are an open-relay. SPAM detection being done by the second level e-mail system, the CPAN version of the interface between the two systems is currently being re-writen, and we will make it available soon.
-
-=back
-
-=item 0.32
-
-08 October 2007 CPAN Patch Release
-
-B<Amendments to release version>
-
-=over 3
-
-
-=back
-
-=back
 
 =head1 USES
 
@@ -366,8 +275,8 @@ sub mail8_setup
                            test=>1, 
                            @_;
 # decalare items to be used with packed maceo {MashFound} this is a "long names" conservation method
-# one name instead of many
-    define_MashFound qw(RelayChecked GoodRelay BadRelay Refused AlreadyRefused Bounce);
+# one name instead of many, but no more than 8
+    define_MashFound qw(RelayChecked GoodRelay BadRelay Refused AlreadyRefused Bounce RestrictedHost);
     return $mail8_setup;
 }
 
@@ -473,16 +382,14 @@ ECHO
 
     LOCAL_CONFIG;
 
-#some bits that still do not work
-# KCleanToken regex  -s1 ([[:print:]]+)
-# KCleanReceived regex -s1 (\<by\>[[:blank:]]+[[:alnum:]\.]+) 
-
     echo <<ECHO;
 KRlookup dns -RA -a.FOUND -d5s -r4
 KMath arith
 KCleanFrom regex  -s1 ([[:alnum:]_\.\-]+\@[[:alnum:]\.\-]+) 
 KCleanAtHost regex  -s1 (\@[[:alnum:]\.\-]+) 
 KCleanHost regex  -s1 ([[:alnum:]\.\-]+) 
+KReceivedBy regex -m -a.FOUND  (by [[:alnum:]\.\-]+) 
+KReceivedWithHTTP regex -m -a.FOUND (with HTTP)
 ECHO
 #mail8_zombie takes care of Zombie names that sendmail can not detect
     if ( -x "/etc/mail/mail8/mail8_zombie" )
@@ -499,15 +406,17 @@ Kstdaccessdb hash -o -a.FOUND /etc/mail/access.db
 ECHO
 
 # we can do some checking with HEADER lines
-#HReceived: £>+ScreenHeader
-    echo <<ECHO
+    echo <<ECHO;
 
 HFrom: £>+ScreenHeader
 HReply-to: £>+ScreenHeader
+HReceived: £>+ScreenHeader
 
 ECHO
 
 }
+
+
 
 =head2 PerlHelpers
 
@@ -1110,13 +1019,12 @@ TEST D({client_resolve}OK)
 TEST SANE(Local_check_relay) T(Translate) F(pc1.local 192.168.0.1, pc2.local 172.16.4.1, serv1.local 10.0.0.1) V(uknown.bogus.bogus 987.654.321.0)
 TEST D({client_resolve}FAIL)
 TEST SANE(Local_check_relay) T(Translate) V(bogus.bogus 721.0.0.1)
+# init {MashFound} or it will not work
+DEFINE_MASHFOUND
 R £*            £: MACRO{ £1    # mail8 DB, check both name and IP
     NOTEST AUTO Local_check_relay wraps this entirely, mail8 will block access
     R £* £| £*      £: £(SelfMacro {MashTempC} £@ £1 £) £1 £| £2
     R £* £| £*      £: £(SelfMacro {MashTempD} £@ £2 £) £1 £| £2
-    dnl init {MashFound} or it will not work
-    R £*            £: £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 £| 0 
-    R £*            £: £(SelfMacro {MashFound} £@ £1 £) £1
     dnl sendmail's own tables wrap IP in square brackets dnl
     R £*            £: £&{MashTempD}                          try IP
     R £*            £: [ £1 ]                               wrap with brackets
@@ -1151,6 +1059,8 @@ mail8 amd mail9 checks result im $#error
 
 Being found does not mean that the host is a BadRelay, just that it will need handling differently to other hosts.
 Hosts recorded as being GoodRelay.
+
+yahoo and hotmail hosts are recorded as {RestrictedHosts}, to help to ensure that e-mail purporting to come from these domains does infact come from these domains.
 
 =back
 
@@ -1230,6 +1140,12 @@ FOUND BadRelay      found? then save here
 R £+.FOUND      £@ £1.FOUND    ok then may be OK?
 RULE
     }
+    $Screen_bad_relay_rule .= <<RULE;
+# hotmail and yahoo senders may be refused elsewhere, but if they really are sending mail    
+R £+.hotmail.£+     £: hotmail.FOUND
+R £+.yahoo.£+       £: yahoo.FOUND
+FOUND RestrictedHost    yahoo or hotmail need special treatment
+RULE
     rule $Screen_bad_relay_rule;
 }
 
@@ -1242,6 +1158,8 @@ HELO & FROM
 After intial HELO and every FROM following
 
 This insists that the HELO host name must either be the same as the {client_name} or resolve to an address that is the same as the {client_name}.
+
+This insists that mail purporting to come from B<hotmail> or B<yahoo> does come from the relevant domain. The mail addres is recorded by {RestrictedHost}
 
 This also handles empty FROM's which are normally bounces of some kind, or the un-helpfull B<callback verify> sudo bounce, which often originates from poorly configured e-mail systems that blindly B<bounce> back to B<Forged FROM> addresses.
 
@@ -1299,7 +1217,7 @@ TEST SANE(GoodRelay)
 TEST SANE(Local_check_mail) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE; f FROM;, F OUR FROM)     
 # retest assuming sudo bounce (callback verify) which we have to tollarate to some degree
 TEST SANE(Local_check_mail) F(<>) AUTO(D; OUR; s HELO; {client_name} DOMAIN; {client_addr} IP; {client_resolve} RESOLVE; f FROM)     
-R £*            £: £&{Refused}      has this host already been refused?
+FIND Refused      has this host already been refused?
 R £+.FOUND      £@ MACRO{ £1
     OPTION NOMASH
     TEST D({Refused}991.2.3.4) E(991.2.3.4, blah.blah)
@@ -1365,7 +1283,25 @@ RULE
         }MACRO
         dnl is system claiming to be us? dnl
         IS THISFOUND AND REFUSED £#error £@ 5.1.8 £: "550 SPAMMER, GO AWAY! " £{mail8ctboood}
-        dnl OK system does not claim to be sending from us dnl
+        # OK system does not claim to be sending from us
+        # these mail domains are hard coded due to be a common favorite of SPAMMERS
+        R yahoo.£+      £: yahoo.£1.FOUND
+        R hotmail.£+    £: hotmail.£1.FOUND
+        R £+.FOUND      £: MACRO{ £1
+            OPTION NOMASH
+            TEST D(ftest\@yahoo.com, {RestrictedHost}0) E(yahoo.com) 
+            TEST D(ftest\@yahoo.com, {RestrictedHost}smtp.yahoo.com.FOUND) V(yahoo.com) 
+            R £*            £: £(SelfMacro {MashTempC} £@ £1 £) £1
+            FIND RestrictedHost
+            R £+.hotmail.£+     £: hotmail
+            R £+.yahoo.£+       £: yahoo
+            R £*            £: £(SelfMacro {MashTempD} £@ £1 £) £1
+            R £*            £: £&{MashTempC}
+            R £&{MashTempD}.£+      £@ £&{MashTempC}
+            REFUSED £#error £@ 5.1.8 £: "550 SPAMMER, GO AWAY! Mail from <" £&f "> WILL ONLY BE ACCEPTED FROM MAIL DOMAIN: " £&{MashTempC} 
+            R £*            £: £&f.FOUND
+            FOUND RestrictedHost
+        }MACRO
     }MACRO
     #
     dnl record attempt at bounce, we will need this to check at RCPT and DATA checking routines dnl
@@ -1659,7 +1595,21 @@ B<Received:>
 
 =over 4 
 
+=over 24
+
+=item with HTTP
+
+HTTP webmail is so B<insecure> and open to abuse, that we have taken the position that we will no longer accept mail from systems that have received mail from a system that received mail vi HTTP.
+
+Those systems already in the B<mail4> database (relays who fail one or more tests, and who you want to recieve mail from) are excempt from this, and so even if they have received mail with HTTP it will be accepted.
+
+Otherwise this is controlled by the level of {Paranoid} 0 or 1 will accept, otherwise not.
+
+=item by DOMAIN
+
 some spammers pass other tests but show themselves by pretending to send from one of our domains! 
+
+=back
 
 =back
 
@@ -1668,6 +1618,28 @@ B<From:>
 =over 4
 
 B<ALL> users must conform, they must not B<FAKE> their "From:" header to show something other than the B<FROM> used in the mail discussion with the mail host. No exceptions! A considerable amount of SPAM comes from mailers that allow their users to send SPAM. It is in your own intrest to stop your users sending SPAM as you are very likly to be registered as a SPAMMER and be blocked by mail servers the world over.
+
+=back
+
+B<Reply-to:>
+
+=over 4
+
+This uses the standard Sendmail B<access> database to check that the reply is not to to an address that you would not accept mail from.
+
+The entry in the B<access> file would be 
+
+=over 2
+
+From:#####    ERROR:"550 We do not accept mail from you"
+
+=back
+
+Where ##### is tha banned server address. Many spammers are using B<yahoo> addresses, from systems that have nothing todo with B<yahoo>! So B<From:> is not really the best way to stop these.
+
+Where e-mail has been received from a B<{RestrictedHost}> such as yahoo or hotmail, the B<Reply-to:> must be the same as B<f>.
+
+Where a B<Reply-to:> of hotmail or yahoo is used by anyone else it is refused!
 
 =back
 
@@ -1696,16 +1668,24 @@ R £*    £: MACRO{ £1
         OPTION NOMASH
         TEST D({currHeader}na by www.celmorlauren.com na) V(anon did not find this,bog standard mailer)
         # internal systems should be ok
-# does not work, will have to omit untill mail8_daemon can take over this bit of checking
-# as stuff is not tokenised what works in test mode does not work live!
-        R £*                £@ £1
-#IS FOUND GoodRelay £@ £1
-#R £*                £: £(CleanReceived £&{currHeader} £)    
-#R £*    £#error £@ 5.1.1 £: "553 DEBUG " £1
+        IS FOUND GoodRelay £@ £1
+        R £*                £: £(ReceivedBy £&{currHeader} £)    
+        # at least "ReceivedBy" seems to return tokens.
         # external systems must be checked
-        R £* by £+          £: MACRO{ £2 # claiming to be one of our domains?
+        R £*.FOUND          £: MACRO{ £1 # claiming to be one of our domains?
             OPTION MASH 2
             TEST AUTO(F OUR HELO, V OK HELO)
+            # due to could not get regex to do anything usefull,
+            # and the external socks stuff not being ready yet, 
+            # this mess is to cope with domains with "by" in their names!
+            # though if you have 'with' dotted in your domain names it will still fail!
+            # celmorlauren do not have any problem named domains
+            R £* by. £* by. £* by. £* by. £* by £+.£+ with £+      £: £6.£7
+            R £* by. £* by. £* by. £* by £+.£+ with £+        £: £5.£6
+            R £* by. £* by. £* by £+.£+ with £+      £: £4.£5
+            R £* by. £* by £+.£+ with £+        £: £3.£4
+            R £* by £+.£+ with £+          £: £2.£3
+            R £*                £: £(SelfMacro {MashTempC} £@ £1 £) £1
             dnl localhost is to be expected, most liky as the first server? dnl
             R localhost         £@ £&{MashSelf}
             R £* localdomain    £@ £&{MashSelf}
@@ -1731,7 +1711,14 @@ RULE
     }
     $screen_header .= <<RULE;
         }MACRO
-        IS THISFOUND AND REFUSED £#error £@ 5.1.1 £: "553 SPAM mailing loop?" £1
+        IS THISFOUND AND REFUSED £#error £@ 5.1.1 £: "553 SPAM mailing loop? Received: by " £&{MashTempC}
+        IS FOUND BadRelay £@ £1
+        # Paranoid? then webmail should also be refused
+        R £*    £: £&{Paranoid}
+        R 0     £@ 0       Not paranoid
+        R 1     £@ 1       slighty
+        R £*    £: £(ReceivedWithHTTP £&{currHeader} £)    
+        IS THISFOUND AND REFUSED £#error £@ 5.1.1 £: "553 SPAM? Web-Mail not accepted here: " £1
     }MACRO
     R From      £@ MACRO{ £&{currHeader}
         OPTION NOMASH
@@ -1775,11 +1762,294 @@ RULE
         R £*            £: From:£1
         R £*            £: £(stdaccessdb £1 £: £1 £)          standard access database
         IS THISFOUND AND REFUSED £#error £@ 5.1.1 £: "553 SPAM REFUSED ! From: " £&f " used a Reply-to: address of " £&{MashTempD} " from header line: (Reply-to: " £&{currHeader} " )"
+        R £*                £: £&{MashTempD}
+        R yahoo.£+          £: yahoo.FOUND
+        R £+.yahoo.£+       £: yahoo.FOUND
+        R hotmail.£+        £: hotmail.FOUND
+        R £+.hotmail.£+     £: hotmail.FOUND
+        R £+.FOUND          £: MACRO{ £1
+            OPTION NOMASH
+            TEST D(ftest\@yahoo.com,{RestrictedHost}test\@yahoo.com.FOUND,{currHeader}RestrictedHost)
+            TEST D({MashTempC}test\@yahoo.com) V(NA)
+            TEST D({MashTempC}notest\@yahoo.com) E(NA)
+            TEST D({MashTempC}notest\@hotmail.com) E(NA)
+            FIND RestrictedHost
+            R £+.FOUND          £: £1
+            R £&{MashTempC}     £@ £&{MashTempC}
+            REFUSED £#error £@ 5.1.1 £: "553 SPAM REFUSED ! From: " £&f " used a Reply-to: address of " £&{MashTempC} " from header line: (Reply-to: " £&{currHeader} " )"
+        }MACRO
 RULE
 
     rule "SScreenHeader", $screen_header,@extra;
 }
 
 
+=head1 HISTORY
+
+B<Versions>
+
+=over 5
+
+=item 0.1
+
+Nov 2006    1st version, pure sendmail M4 hack, using plug-in Perl programs.
+
+=item 0.2
+
+25 August, this 1st CPAN M4 hack script, original script split into, this B<Mail8> and B<Utils> for creation and testing.
+
+21 Sept 2007 Released onto CPAN. 
+
+B<Amendments to release version>
+
+Most changes are recorded in B<Utils> as this really was a messy hack conversion, with many revisions required to get something that worked.
+
+=over 3
+
+=item 22 Sept 2007
+
+added this HISTORY
+
+mail8 DataBase file refrences (apart from B<mail4>) have been removed, and will now only added if the {Perl_Helpers} have been installed, currently these scripts are not available, their future will be decided later.
+
+mail8_zombie now included in distro, install it to get the full benifits
+
+=back
+
+=item 0.21
+
+22 September 2007 CPAN Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 23 September 2007
+
+B<sendmail> works fine in command line test mode. But complains of "too many long names" when this is installed and run, "sendmail" assigns on the "fly" macro names!????!!!!?.
+
+A limit of 96 (8 Bit limits?) is really too constrictive.
+
+=over 3
+
+=item *
+
+1st try now using {MashTemp} instead of {MashStack}, saves some, so sendmail falls over a little later!
+
+=item *
+
+OPTION NOMASH used where possible, also "OPTION MASH 1" to conserve name space in other places, this and changes to B<Utils> have removed 20 names
+
+=back
+
+=back
+
+=item 0.22
+
+23 September 2007 CPAN Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 23 Sept 2007
+
+on SuSE 10.1 (remastered) sendmail version 8.13.6, complained of an unbalanced E<gt>, not the fault of the sender but a macro? why did sendmail then decide to 553???, had no problem with the same code on SuSE 9.3 sendmail 8.13.3?
+
+So a single line added and hopefully all will be well, and this system can finally protect celmorlauren, we suffer quite a lot of spam, so we should be able to spot any other weakness in the code.
+
+=back
+
+=item 0.23
+
+23 September 2007 CPAN Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 24 Sept 2007
+
+it appears we have caused a problem with the changes above, HELO's are failing when they should not.
+added failed hosts to test data, to try and ensure it does not happen again.
+
+=back
+
+=item 0.24
+
+24 September 2007 CPAN Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 24 Sept 2007
+
+Patch required, spammer whose domain matched who they said they were, was not put through the numeric zombie check as expected, a Fix broke the intended logic, test data added to mail8.
+
+=back
+
+=item 0.25
+
+24 September 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 25 Sept 2007
+
+HELO checking for {daemon_addr} added, should have there already (whoops sorry), however numeric addresses will not resolve anyway, so CPAN patch release delayed untill more serious problems encountered.
+Develelpment on B<test_cgi> will cause further amendments, so will wait for that before release.
+
+=item 30 Sept 2007
+
+ref to "network associates" changed to "network solutions", just been amending my "domains", so spotted the error, as I tend to look for them using google. Other typo's will be corrected when found.
+
+Noted rather more spam than normal has been arriving at my mail system, all fake MX's have been stopped as expected, but a few from Open Relays get through this (the 1st level filter), only to fail at the 2nd level email system. In an attempt to allow the 2nd level email system to sleep more, and only have to deal with real e-mail.
+
+=over 3
+
+=item 1
+
+Header B<From:> checked is the same as B<f> or at least contains B<f>. Failures are {Refused}, no exceptions all users are checked!
+
+=item 2
+
+Header B<Recieved:> check now sets {Refused} for failures. {GoodRelay} hosts are exempted from this check.
+
+=item 3
+
+Found during testing, that mail only worked once only! corrections made to ensure essential macros are set up again, and others use sendmail macros such as B<f> instead of supplied values, which may be the from address 1st time round, 2nd and more times it is (conneted as HOST & IP)?!
+
+=back
+
+=back
+
+=item 0.26
+
+30 September 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 30 Sept 2007
+
+noted that the B<Pause> upload server falls foul of the just uploaded system, so the B<mail4.db> will now permit those listed to skip all checks, however local users will not be allowed to skip mail FROM checks.
+
+=back
+
+=item 0.27
+
+30 September 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 01 Oct 2007
+
+sendmail needs more free "long names" for its own use, this had been using only 21 "long names", Sendmail::M4::Utils has been modified to provide routines that can use just one "long name" {MashFound}, so this will be recoded as required as the {macros} used before can no longer be direcltly accessed. Total saving minus 5, leaving 16.
+
+Also found 2 other names, that did not need persistance, these now MashTempC & D
+
+=back
+
+=item 0.28
+
+02 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 03 Oct 2007
+
+noticed that header line "From:" where email address not included in E<lt> E<gt> brackets, will not match when should.
+
+=back
+
+=item 0.29
+
+03 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 03 Oct 2007
+
+the Received: header checking does not work, and currently nothing tried makes it work, fine in test mode. But as headers are not tokenised with sendmail 8.13, can not do anthing usefull with the supplied tools.
+
+So currently does nothing, just returns.
+
+Fix must wait for Sendmail::M4::mail8_daemon and its worker module Sendmail::M4::Mail8_daemon.pm, which will now do more than originally designed to do.
+
+Patch required to remove useless error messages from the logs.
+
+=back
+
+=item 0.30
+
+03 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 05 Oct 2007
+
+noted that dots and dashs did not work in From: header checker for names, fixed. However underscores  will still not work
+
+=back
+
+=item 0.31
+
+05 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 08 Oct 2007
+
+Noted that lots of SPAM has Reply-to: yahoo or hotmail, system will now check sendmails standard B<access> database for B<From:####> where #### is system we do not accept mail from. SPAMMERS are now concentrating on finding open-relays or other poorly setup and vunerable systems, many of which seem to be B<Exim> servers. These are of course blocked on their third SPAM or sometimes on their first if they are an open-relay. SPAM detection being done by the second level e-mail system, the CPAN version of the interface between the two systems is currently being re-writen, and we will make it available soon.
+
+=back
+
+=item 0.32
+
+08 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 10 Oct 2007
+
+Noted that the bulk of spam that has got through to the second level filter, has originated from WEB mail, which will now be refused with a {Paranoid} setting of 2 or more.
+
+Received: DOMAIN name checking for phoney received from # by # now working, at least for us at the 1st level.
+
+=item 12 Oct 2007,
+
+yahoo and hotmail domains are the Reply-to: and From: names of choice for spammers. ALL sending from domains that have nothing to do with yahoo or hotmail claiming to relay their domains, will be now stopped. Hard coded as these are so well known!    
+
+Documentation clean-up. HISTORY moved to end of document.
+
+=back
+
+=item 0.33
+
+33 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=back
+
+=cut
 
 1;

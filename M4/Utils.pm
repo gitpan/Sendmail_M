@@ -9,7 +9,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.25;
+$VERSION= 0.26;
 
 use IO::File;
 use IO::Select;
@@ -25,7 +25,7 @@ Sendmail::M4::Utils - create and test sendmail M4 hack macro files
 
 =head1 STATUS
 
-Version 0.25 (Beta)
+Version 0.26 (Beta)
 
 This compiles the M4 sendmail hack used by celmorlauren since version 0.23
 
@@ -42,7 +42,7 @@ Creating and testing B<sendmail hack macros> can be a tiresome and error prone b
 Testing methods are desgined to be used by both the commamd line and via HTML using a web browser.
 
 Please note that you will have to hand edit your B<sendmail m4 #.mc> file, to include the reference to the B<hack> being generated, below is an example taken from our own B<linux.mc> file.
-The line you must include, begins with B<HACK> the hack file follows, the current development version can be found as B<Sendmail::M4::Mail8> and B<Sendmail::M4::mail8>, B<mail8> is the program, B<Mail8> is its module, see their documetation for more.
+The line you must include, begins with B<HACK> the hack file follows, the current development version can be found as L<Sendmail::M4::Mail8> and L<Sendmail::M4::mail8>, B<mail8> is the program, B<Mail8> is its module, see their documetation for more.
 
     dnl  We use the generic m4 macro definition. This defines
     dnl  an extented .forward and redirect mechanism.
@@ -74,6 +74,10 @@ The most notable help are.
 
 =over 2
 
+=over 2
+
+=item MACRO{ 
+
 When constructing "macros" is the ability to "nest" called macros within the text block of the calling "macro", below is an example of the development version of our ANTI-SPAM hack.
 
  rule <<RULE;
@@ -91,6 +95,24 @@ When constructing "macros" is the ability to "nest" called macros within the tex
 
 Without the "nested" macro structure this could be difficult to keep track of, and indeed it was, thats why we have developed this.
 
+=item Inline MACRO
+
+The above B<MACRO{> also handles INLINE MACROS which enable much used logical statements to be included without the cost of another rule-set, this module includes a selection of these.
+
+=item Packed Macro {MashFound#}
+
+Most of the included INLINE MACROS use the packed macro {MashFound#}, which are designed to hold 9 long-names each, which of the {MashFound#} macros being refered to is invisable to the developer|user. And during testing the normal macro statement {####} where #### is a macro contained by {MashFound#} may be used, the testing program does all the required conversions.
+
+This is required due to the limited number of free to use long-names, B<sendmail> assigns long-names for it-self at run-time. And so working OK during testing does not mean that sendmail will not fail at run-time. It is recommended to keep develeoper long-names to under 16.
+
+=item TEST
+
+Automated testing, the inclusion of test data within the source program, some of which is highly automated. It is very easy to generate 4000 lines of test results, the B<TEST> setup has expected replys, so will only stop on the unexpected, so any changes to a script can be checked with ease. 
+
+=back
+
+After using this to generate your HACK M4 files you will never want to it by hand again!
+
 =back
 
 This module is non OO, and exports the methods descriped under EXPORTS.
@@ -103,185 +125,23 @@ email E<lt>development@celmorlauren.comE<gt>
 
 =head1 USES
 
- IO::File       file creation
- IPC::Open3     to start "sendmail -bt -Ctest.cf"
- File::Copy     to copy "tee" file to "file" in sendmails "hack" directory.
- English
- Data::Dumper   debuging this! used by our exported method "debug"
+=over 16
 
-=head1 HISTORY
+=item IO::File
 
-B<Versions>
+file creation
 
-=over 5
+=item IPC::Open3 
 
-=item 0.1
+to start "sendmail -bt -Ctest.cf"
 
-Nov 2006  1st version, pure sendmail M4 hack, using plug-in Perl programs.
+=item File::Copy
 
-=item 0.2
+to copy "tee" file to "file" in sendmails "hack" directory.
 
-25 Aug 2007, B<this> 1st CPAN test module, developed to test M4 hack scripts, original script split into B<Utils> for creation and testing, and B<Mail8> the B<ANTI SPAM> engine.
+=item English
 
-B<Amendments to release version>
-
-=over 3
-
-=item 30
-
-Aug 2007, TEST, HINT & FORCE did not nest.
-
-=item 3
-
-Sept 2007, cf file backup now has a tilde ending "~".
-%setup{paranoid} added for mail8.
-
-=item 5
-
-Sept 2007, NOTEST, for nested MACROS that are already tested by a containing level, or where additional testing makes no sense.
-
-=item 8
-
-Sept 2007, Testing of a Mail8 component with bugs caused files with wrong permisions to be created, meaning the standard user could not re-create them, and some confusion as to what was happening. Utils will now B<whoops> on these problems giving a clear indication as to the real problem.
-
-{MashStack} failed to work when more than one instance was used on a single line.
-
-NOTEST AUTO will not B<moan> meaning auto generated lines that not be meaningfully tested do not complain about it.
-
-FORCE and absence of TEST's now will continue to ask for input for a rule, until nothing is entered
-
-=item 10
-
-Sept 2007, Testing of Reintergrated Mail8 showed that NESTing still did not work, reason found and fixed, also somethings that where expected were not allways supplied.
-
-GLOBAL added to reduce the number of {macro_names} as Mail8 managed to go over B<sendmail>s limit of B<96>, used at the top level S rule to reset counters.
-
-=item 11
-
-Sept 2007, INLINE added, Mail8 managed to go over the standard B<sendmail> limit of B<100> B<named rulesets>, counted a total of 123 in the test.cf, we know we could re-compile sendmail with a bigger limit. But that is something we can not expect of anyone else.
-
-=item 13
-
-Sept 2007, UTF8 EURO currency "character" added can now be used in rule definitions, where $ would have to be escaped.
-
-=item 14
-
-Sept 2007, FOUND inbuilt MACRO added to load B<SelfMacro {macro}> with "$+.FOUND", intention is to remove another B<rule set> as this B<MACRO> will be coded B<INLINE>.
-
-=item 15
-
-Sept 2007, method B<inbuilt_rule> added to enable testing of B<sendmail>s own rule sets, these use the same methods and control HASHs as B<rule> except generates no code.
-
-=item 16
-
-Sept 2007, B<MACRO{> statements (REFUSED, ALREADYREFUSED, IS (REFUSED, ALREADYREFUSED, FOUND), INLINE ALLWAYS) added to both help with reducing the number of generated B<rule sets> and to improve the layout of B<Mail8>.
-
-=item 17
-
-Sept 2007, B<MACRO{ TEST> sub statement SANE and the method "sane" added to simplify reseting B<sendmail -bt> test session to sensible values.
-
-=item 19
-
-Sept 2007, B<MACRO{ TEST> sub statement AUTO and method "testing_domains" added to enable customers vary the test data to reflect their setup, testing B<Sendmail::M4::Mail8> via B<Sendmail::M4::mail8> with just celmorlauren email setup is not sufficient.    
-
-=item 21
-
-Sept 2007, Documentation clean up, noted that EURO character causes problems with Perldoc for version 5.6 Perl, POUND does not work either (but at least does mess up display)
-
-=back
-
-=item 0.21 
-
-21 Sept 2007 CPAN Amended version
-
-B<Amendments to release version>
-
-=over 3
-
-=item 22
-
-Sept 2007, Documentation clean up, noted that POUND character does not display correctly on CPAN, hum it would be better if CPAN coped with UTF8 characters!
-
-B<MACRO{> DEBUG statement added to switch on debuging within the TEST line read in phase, to track difficult to see errors.
-
-{MashSelf} failed to work when more than one instance was used on a single line.
-
-=back
-
-=item 0.22 
-
-22 Sept 2007 CPAN Amended version
-
-B<Amendments to release version>
-
-=over 3
-
-=item 22
-
-Sept 2007, installed on a test system, started to run ("too many long names" again) AAARGH! 
-
-{MashTemp} added a variant of {MashStack}, differnce being the reduced number of names generated, the names only being safe only in the current macro, and can be clobbered by contained macros, that use this. You have been warned!
-
-=item 23
-
-Sept 2007, B<Macro{> OPTION added, this is to enable such things 
-
-OPTION NO MASH    
-
-OPTION MASH 1       mash nameing policy uses {Mash1}   
-
-Also added sub option to INLINE ALLWAYS MASH, which overides the normal macro nameing policy, internal methods now use the mash name {MashTempA} for purposes of saving and returning a value.
-
-=back
-
-=item 0.23 
-
-23 Sept 2007 CPAN Amended version
-
-B<Amendments to release version>
-
-=over 3
-
-=item 01
-
-Oct 2007, live on primary, secondary and test systems. When sending mail to "sendmail.org" (via test), sendmail tried and failed to allocate more names for itself ("too many long names" again) AAARGH! However the send did still work (without md5) 
-
-Currently the Sendmail::M4::Mail8.pm version uses 21 "long names", OK for normall sending. But md5 needs more.
-
-=over 4
-
-=item *
-
-MACRO{ statement FOUND & IS FOUND modified, new statements FIND & STORE, now a single {MashFound} macro can be loaded with as many sub names as required.
-
-
-=item *
-
-Translate rule set modified to pack {MashFound}    
-
-=item *
-
-define_MashFoud added, to declare packed components of {MashFound}
-
-Modifications made so that {macro} maybe used for TEST D & SANE statments, but will be packed into {MashFound} if they have been defined. 
-
-=back
-
-=back
-
-=item 0.24 
-
-22 October 2007 CPAN Amended version
-
-B<Amendments to release version>
-
-=over 3
-
-=item 08
-
-Oct 2007, error in B<pod> line 960 space between =head 2, as B<Mail8> has been updated with B<Reply-to> header line checking, this little thing can be fixed and uploaded.
-
-=back
+Data::Dumper   debuging this! used by our exported method "debug"
 
 =back
     
@@ -297,180 +157,427 @@ This configures this module, and is always required first.
 
 The %setup hash is enclosed in a BEGIN block, to ensure that all programs and modules that use this get the same settings.
 
+Expected/Allowed values allways as a (hash value pairing).
+
+=over 16
+
+=item hack_dir
+
+SCALAR with default value of "/usr/share/sendmail/hack",
+
+=item file
+
+SCALAR "hack file name" to generate, with either full path or just the name, no default.
+
+NOTE: "build" or "install" must also be specifed.
+
+NOTE: if "install" is also defined a backup copy of "file" is made if it already exists!
+
+=item sendmail
+
+SCALAR with default value of "/usr/sbin/sendmail"
+
+=item mc
+
+SCALAR with default value of /etc/mail/linux.mc, this is the sendmail m4 source file to be used to build "cf", this is required for 'installation'
+
+=item cf
+
+SCALAR "test.cf file name" to build for testing purposes.
+
+if "install" is specified and "cf" is not specified, will assume "test.cf" within current directory.
+
+if "install" is specified and "cf" is is "sendmail.cf" will "die"!
+    
+otherwise will assume the main "sendmail.cf" is being tested. 
+
+=item html
+
+HASH REF, default is 0
+
+=item build
+
+SCALAR Generate|build "tee" file, this does not require root permissions.
+
+Enables you to check the "tee", before installing it.
+
+NOTE: ignored if also "html".
+
+=item install
+
+SCALAR
+
+SU "root" permissions are required.
+Copy "tee" file to "file", (sendmail hack directory file).  Create "cf" file.
+
+NOTE: ignored if also "html".
+
+=item test
+
+SCALAR Will "build"|"install" before "test" if specified.
+
+=item silent
+
+SCALAR
+
+STOPS all output! AND character translation!!  It is assumed that you are going to do something with the compiled rules.
+
+=item error
+
+ARRAY REF   only when also "silent" has contents of "moan", "whoops" will allways simply exit.
+            
+=item UNKNOWN
+
+ARRAY REF remaining unknown arguments supplied.
+
+=item tee
+
+SCALAR automatic info, name optained from "file", this file does not need "root" SU permissions, and is placed in the current working directory.
+
+Installation phase copies this to "file" which will need SU perms!
+
+NOTE: if "build" is also defined a backup copy of "tee" is made if it already exists!
+
+=item log
+
+SCALAR automatic info, as "tee" but appended with ".log".
+
+This file is generated during non "html" testing, contains all data entered by yourself and from "sendmail -bt".
+
+If "file" is not also defined then this file will not be generated.
+
+=item testing
+
+SCALAR automatic info, set when "test" starts, changes the way both "ok" and "echo" operate.
+
+=item SU
+
+SCALAR automatic info, is user "root":"root".
+
+=item time
+
+SCALAR automatic info, "time" script started.
+
+=item macro
+
+SCALAR automatic variable, incremented on MACRO statements
+
+=item rules
+
+ARRAY REF automatic list of read in "S" macro rules
+
+=item rule
+
+HASH  REF automatic keyed by "rules" 
+
+Format
+
+=over 4
+
+rule { 
+
+=over 2
+
+Stest_macro => { 
+
+=over 2
+
+=over 12
+
+=item S => []
+
+contains complete "S" macro coding
+
+=item H => []
+
+HINT's as to use
+
+=item O => []
+
+keys for "T" in order of specification
+
+=item T => { 
+    
+TEST tests for coding
+
+=over 2
+
+=over 12
+
+=item n => {
+    
+n = numeric count of test   
+
+see L</rule::TEST> for details
+
 =back
 
-    Expected/Allowed values allways as a (hash value pairing).
+} 
 
-    hack_dir    
-            SCALAR with default value of "/usr/share/sendmail/hack",
-    file    SCALAR "hack file name" to generate, with either full path or 
-            just the name, no default.
-            NOTE: "build" or "install" must also be specifed.
-            NOTE: if "install" is also defined a backup copy of "file" is made 
-                  if it already exists!
+=back
 
-    sendmail
-            SCALAR with default value of "/usr/sbin/sendmail"
-    mc      SCALAR with default value of /etc/mail/linux.mc,
-            this is the sendmail m4 source file to be used to build 
-            "cf", this is required for 'installation'
-    cf      SCALAR "test.cf file name" to build for testing purposes.
-            if "install" is specified 
-                if "cf" is not specified, 
-                    will assume "test.cf" within current directory
-                else 
-                    if "cf" is "sendmail.cf" will "die"!
-            else
-                will assume the main "sendmail.cf" is being tested. 
+} 
 
-    html    HASH REF, default is 0
+=item M => []
 
-    build   SCALAR
-            Generate|build "tee" file, this does not require root permissions.
-            Enables you to check the "tee", before installing it.
-            NOTE: ignored if also "html".
-    install SCALAR
-            SU "root" permissions are required.
-            Copy "tee" file to "file", (sendmail hack directory file).
-            Create "cf" file.
-            NOTE: ignored if also "html".
-    test    SCALAR
-            Will "build"|"install" before "test" if specified.
+contains list of SUB macros.  TOP Level S only!
 
-    silent  SCALAR
-            STOPS all output! AND character translation!!
-            It is assumed that you are going to do something with the compiled
-            rules.
-    error   ARRAY REF   only when also "silent" has contents of "moan"
-            "whoops" will allways simply exit.
-            
-    UNKNOWN ARRAY REF remaining unknown arguments supplied.
+=item F =>
 
-    tee     SCALAR automatic info, name optained from "file", 
-            this file does not need "root" SU permissions, 
-            and is placed in the current working directory.
-            Installation phase copies this to "file" which will need SU perms!
-            NOTE: if "build" is also defined a backup copy of "tee" is made 
-                  if it already exists!
-    log     SCALAR automatic info, as "tee" but appended with ".log"
-            This file is generated during non "html" testing, contains all data
-            entered by yourself and from "sendmail -bt".
-            If "file" is not also defined then this file will not be generated.
-    testing SCALAR automatic info, set when "test" starts, changes the way 
-            both "ok" and "echo" operate.
+SCALAR     only defined if FORCE is defined
 
-    SU      SCALAR automatic info, is user "root":"root".
-    time    SCALAR automatic info, "time" script started.
+=item N =>
 
-    macro   SCALAR automatic variable, incremented on MACRO statements
-    rules   ARRAY REF automatic list of read in "S" macro rules
-    rule    HASH  REF automatic keyed by "rules" 
-            Format
+SCALAR     only defined if NOTEST is defined
 
-                rule { 
-                    Stest_macro => { 
-                        S => []         contains complete "S" macro coding
-                        H => []         HINT's as to use
-                        O => []         keys for "T" in order of specification
-                        T => {          TEST tests for coding
-                            n => {      n = numeric count of test   
-                                see "rule":"TEST" for details>
-                            } 
-                        } 
-                        M => []         contains list of SUB macros
-                                        TOP Level S only!
-                        F => SCALAR     only defined if FORCE is defined
-                        N => SCALAR     only defined if NOTEST is defined
-                        G => SCALAR     only defined if GLOBAL is defined
-                                        Top Level S only
-                                        1st line after S definition
-                                        Reduces number of {macro_names}
-                                        Limit of 96 !
-                    }
-                }
+=item G => 
 
-    inline  HASH REF automatic, where a rule is to be inlined
-            rule should start life as a standard rule above,
-            when known to work OK, then inline. No other changes
-            are needed. TEST lines etc are ignored.                
-            Format is almost the the same as the the above rule,
-            except most entrys are only here, so as not to break things.
-            Format
+SCALAR     only defined if GLOBAL is defined
 
-                inline {
-                    Stest_macro => { 
-                        S => []         contains complete "S" macro coding
-                        G => SCALAR     only defined if GLOBAL is defined
-                        I => []         contains list of sub inlines
+Top Level S only
 
-                        H => []         exists only for compatability
-                        O => []         exists only for compatability
-                        T => {}         exists only for compatability
-                        M => []         exists only for compatability
-                        F => SCALAR     exists only for compatability
-                        N => SCALAR     exists only for compatability
-                    }
-                }
+1st line after S definition.
 
-    sane    HASH REF automatic, keyed normally by "rule", however anything 
-            may be used as a key.
-            Generated noramally by the method "sane" and refernced during
-            testing by the MACRO TEST sub statement SANE "key".
-            Format
+Reduces number of {macro_names} Limit of 96 !
 
-                sane {
-                    key => []           sendmail .D statements
-                }
+=back
 
-    testing_domains
-            HASH REF automatic, generated by method "testing_domains",
-            used during testing.
-            Format
+}
 
-                testing_domains {
-                    OUR [ HELO, DOMAIN, IP, RESOLVE, FROM, RCPT \n ],
-                    OK  [ HELO, DOMAIN, IP, RESOLVE, FROM, RCPT \n ],
-                    BAD [ HELO, DOMAIN, IP, RESOLVE, FROM, RCPT \n ],
-                }
-                testing_domains_keys {
-                    HELO    => 0,
-                    DOMAIN  => 1,
-                    IP      => 2,
-                    RESOLVE => 3,
-                    FROM    => 4,
-                    RCPT    => 5,
-                }
-            
-            Lists|lines of "," delimited values.
-            "OUR" is your domain,
-            "OK"  are legal domains and should be ok
-            "BAD" are faked|forged domains and should allways fail.
+=back
 
-    FOUND   HASH REF automatic, generated by MACRO statements such
-            as FOUND, this uses just ONE "long name" to store as
-            many FOUND statements as needed
-            Format
+}
 
-                FOUND => {
-                    LIST    => [],      list of FOUND keys
-                    KEY     => {},      key is {macro} value is FOUND key
-                },
-    MASH_FOUND
-            HASH REF automatic, used during testing to keep current
-            values for {MashFound} packed components.
-            Format
+=back
 
-                MASH_FOUND => {
-                    macro   => value,
-                    macro   => value,
-                    macro   => value,
-                    macro   => value,
-                }
+=back
 
-    magic   SCALAR  special value used by this program, do not use.
+=item inline
 
-    paranoid
-            SCALAR  value used by "Mail8" see its page for meaning.
+HASH REF automatic, where a rule is to be inlined, rule should start life as a standard rule above, when known to work OK, then inline. No other changes are needed. TEST lines etc are ignored.
+
+Format is almost the the same as the the above rule, except most entrys are only here, so as not to break things.
+
+Format
+
+=over 4
+
+inline { 
+
+=over 2
+
+Stest_macro => { 
+
+=over 2
+
+=over 12
+
+=item S => []
+
+contains complete "S" macro coding
+
+=item G => SCALAR
+
+only defined if GLOBAL is defined
+
+=item I => []
+
+contains list of sub inlines
+
+=item H => []
+
+exists only for compatability
+
+=item O => []
+
+exists only for compatability
+
+=item T => {}
+
+exists only for compatability
+    
+=item M => []
+
+exists only for compatability
+
+=item F => SCALAR
+
+exists only for compatability
+
+=item N => SCALAR
+
+exists only for compatability
+
+=back
+
+}
+
+=back
+
+}
+
+=back
+
+=back
+
+=item sane
+
+HASH REF automatic, keyed normally by "rule", however anything may be used as a key.
+
+Generated noramally by the method "sane" and refernced during testing by the MACRO TEST sub statement SANE "key".
+
+Format
+
+=over 4
+
+sane { 
+
+=over 2
+
+=over 12
+
+=item key => []
+
+sendmail .D statements
+
+=back
+
+}
+
+=back
+
+=back
+
+=item testing_domains
+
+HASH REF automatic, generated by method "testing_domains", used during testing.
+
+Format
+
+=over 4
+
+testing_domains {
+
+=over 2
+
+=over 12
+
+=item OUR 
+
+[ HELO, DOMAIN, IP, RESOLVE, FROM, RCPT \n ],
+    
+=item OK
+    
+[ HELO, DOMAIN, IP, RESOLVE, FROM, RCPT \n ],
+
+=item BAD
+
+[ HELO, DOMAIN, IP, RESOLVE, FROM, RCPT \n ],
+
+=back
+
+}
+
+=back
+
+testing_domains_keys {
+
+=over 2
+
+HELO    => 0,
+    
+DOMAIN  => 1,
+
+IP      => 2,
+
+RESOLVE => 3,
+
+FROM    => 4,
+
+RCPT    => 5,
+
+=back
+
+}
+
+=back
+
+Lists|lines of "," delimited values.
+
+"OUR" is your domain,
+
+"OK"  are legal domains and should be ok
+
+"BAD" are faked|forged domains and should allways fail.
+
+
+=item FOUND
+
+HASH REF automatic, generated by MACRO statements such as FOUND, this uses just ONE "long name" to store as many FOUND statements as needed.
+
+Format
+
+=over 4
+
+FOUND => {
+
+=over 2
+
+=over 12
+
+=item LIST  => []
+
+list of FOUND keys
+
+=item KEY   => {}
+
+key is {macro} value is FOUND key
+
+=back
+
+},
+
+=back
+
+=back
+
+=item MASH_FOUND
+
+HASH REF automatic, used during testing to keep current values for {MashFound} packed components.
+
+Format
+
+=over 4
+
+MASH_FOUND => {
+
+=over 2
+
+macro   => value,
+
+macro   => value,
+
+macro   => value,
+
+macro   => value,
+
+=back
+
+}
+
+=back
+
+=item magic
+
+SCALAR  special value used by this program, do not use.
+
+=item paranoid
+
+SCALAR  value used by "Mail8" see its page for meaning.
+
+=back
+
+=back
 
 =cut
 
@@ -680,6 +787,8 @@ If setup{silent} places complaints in setup{error} instead of displaying
 
 Perhaps this should be in Carp?
 
+And just to let you know, our own comment module will be on CPAN soon, just as soon as the requested name space has been OKed, will be B<Carp::Comment>, not uploaded yet due to the module that depends on it not being ready.
+
 =back
 
 =cut
@@ -795,15 +904,24 @@ sub ok
 
 =pod
 
-    NOTE:   NOT for HTML! or when "silent"
-            ALLWAYS does nothing, just returns 1 or 0 if "testing".
+=over 4
+
+=over 12
+
+=item NOTE:
+
+NOT for HTML! or when "silent"
+
+ALLWAYS does nothing, just returns 1 or 0 if "testing".
+
+=back
 
 =cut
     ($setup{'html'} or $setup{'silent'}) and return ($setup{'testing'})?(0):(1);
 
 =pod
 
-    print "message?"            allways apends a ?
+print "message?"            allways apends a ?
 
 =cut
     my ($package, $filename, $line) = caller;
@@ -819,9 +937,23 @@ sub ok
 
 =pod
 
-    Normal usage, when not "testing".
-        <STDIN> "reply" "y" or "CR"    returns 1  OK!
-        anything else                  returns 0  NOT OK!
+Normal usage, when not "testing".
+
+=over 4
+
+=over 32
+
+=item <STDIN> "reply" "y" or "CR"
+
+returns 1  OK!
+
+=item anything else
+
+returns 0  NOT OK!
+
+=back
+
+=back
 
 =cut
         scalar $ok or return 1;
@@ -832,9 +964,25 @@ sub ok
 
 =pod
 
-    During "testing"
-        <STDIN> "CR"        returns 0
-        anything else       returned as is
+During "testing"
+
+=over 4
+
+=over 32
+
+=item E<lt>STDINE<gt> "CR"
+
+returns 0
+
+=item anything else
+
+returned as is
+
+=back
+
+=back
+
+=back
 
 =cut
         return (scalar $ok)?($ok):(0);
@@ -917,10 +1065,17 @@ In your code use at least 3 spaces where sendmail expects a "tab", and use ("B<P
 
 =back
 
+=over 12
+
+=item NOTE:
+
+NOT for HTML! or when "silent"
+
+ALLWAYS does nothing, just returns 1 or 0 if "testing".
+
 =back
 
-    NOTE:   NOT for HTML! or when "silent"    
-            allways does nothing, just returns 1.
+=back
 
 =cut
 push @EXPORT, "echo";
@@ -944,10 +1099,21 @@ sub echo
     
 =head2 dnl @_
 
-    For sendmail "dnl" comments, wraps supplied args in "dnl".
+=over 4
 
-    NOTE:   NOT for HTML! or when "silent"    
-            allways does nothing, just returns 1.
+For sendmail "dnl" comments, wraps supplied args in "dnl".
+
+=over 12
+
+=item NOTE:
+
+NOT for HTML! or when "silent"
+
+ALLWAYS does nothing, just returns 1 or 0 if "testing".
+
+=back
+
+=back
 
 =cut
 push @EXPORT, "dnl";
@@ -973,15 +1139,54 @@ It is safest to define {MashFound} before use, supply it with a list of {macro n
 push @EXPORT, "define_MashFound";
 sub define_MashFound
 {
-    my $FOUND = $setup{'FOUND'};
+    my $FOUND   = $setup{'FOUND'};
+    my $L_KEY   = scalar @{$FOUND->{'LIST'}};
+    my $FOUND_LIST;
+    unless ( scalar $L_KEY )
+    {
+        $FOUND_LIST  = $FOUND->{'LIST'}->[0] = [];
+    }
+    else
+    {
+        $L_KEY--;
+        $FOUND_LIST  = $FOUND->{'LIST'}->[$L_KEY];
+    }
+    my $KEY     = scalar @$FOUND_LIST;
+
     my $MASH_FOUND = $setup{'MASH_FOUND'};
+
     foreach my $load_macro (@_)
     {
-        my $KEY = push @{$FOUND->{'LIST'}}, $load_macro;
-        $FOUND->{'KEY'}->{$load_macro} = $KEY;
+        if ( $KEY > 8 )
+        {
+            $L_KEY++;
+            $KEY = 0;
+            $FOUND_LIST  = $FOUND->{'LIST'}->[$L_KEY] = [];
+        }
+
+        $KEY = push @$FOUND_LIST, $load_macro;
+        $FOUND->{'KEY'}->{$load_macro} = [$L_KEY, $KEY ];
         $MASH_FOUND->{$load_macro} = "none";
     }
 }
+
+sub DEFINE_MASHFOUND
+{
+    my $L_KEY   = scalar @{$setup{'FOUND'}->{'LIST'}};
+    $L_KEY--;
+    my $inits   = " £| 0" x 9; 
+    my $key = <<KEY;
+    R £*    £:$inits
+KEY
+    foreach my $KEY (0..$L_KEY)
+    {
+        $key .= <<KEY;
+    R £*    £: £(SelfMacro {MashFound$KEY} £@ £1 £) £1
+KEY
+    }
+    return $key;
+}
+
 =head2 testing_domains @_
 
 =over 4
@@ -1249,7 +1454,7 @@ sub MashPack
     my @sane_define;
 #one day the packed macro {mash_found} may not be needed, but in the mean time to keep testing simple
 #translate sane and define statemnts into packed form if they have been declared
-    my @pre_sane;
+    my (@pre_sane, %pre_sane);
     my $mash_found = 0;
     foreach my $pre_sane (@_)
     {
@@ -1262,6 +1467,8 @@ sub MashPack
             {
                 $pre_sane =~ s/\{\w+\}//;
                 $setup{'MASH_FOUND'}->{$pre_mash} = $pre_sane;
+                my ($L_KEY,$KEY) = @{$setup{'FOUND'}->{'KEY'}->{$pre_mash}};
+                $pre_sane{$L_KEY} = $KEY;
                 $mash_found++;
             }
             else
@@ -1276,104 +1483,74 @@ sub MashPack
     }
     if ( scalar $mash_found )
     {
-        my $pre_sane = 'Translate $| 0 $| '.join ' $| ',(map "$setup{'MASH_FOUND'}->{$_}",@{$setup{'FOUND'}->{'LIST'}});
-        push @sane_define, $pre_sane;
+        foreach my $L_KEY ( keys %pre_sane )
+        {
+            my $pre_sane = "Translate \$| $L_KEY \$| ".join ' $| ',(map "$setup{'MASH_FOUND'}->{$_}",@{$setup{'FOUND'}->{'LIST'}->[$L_KEY]});
+            if ( $pre_sane{$L_KEY} < 9 )
+            {
+                my $diff = 9 - $pre_sane{$L_KEY};
+                $pre_sane .= " \$| 0" x $diff;
+            }
+            push @sane_define, $pre_sane;
+        }
     }
     return @sane_define;
 }
 
-sub MashStore
+sub MashCalcs
 {
     my ($load_macro) = @_;
     my $FOUND = $setup{'FOUND'};
-    my ($KEY, $key);
-    if ( $KEY = $FOUND->{'KEY'}->{$load_macro} )
+    scalar $FOUND->{'KEY'}->{$load_macro} or define_MashFound $load_macro;
+    my ($L_KEY,$KEY) = @{$FOUND->{'KEY'}->{$load_macro}};
+    my $FOUND_LIST  = @{$FOUND->{'LIST'}->[$L_KEY]};
+    my $MashFound   = "£|£+" x $KEY;
+    my $end_KEY     = $KEY - 1;
+    my $MashRewrite = "£|" . join "£|", (map "£$_", (1..$end_KEY)); 
+    $end_KEY += 2;
+    my $wild_end = "";
+    if ( $FOUND_LIST < 9 )
     {
-        my $MashFound   = "£|£+" x $KEY;
-        my $MashRewrite = "£|" . join "£|", (map "£$_", (1..$KEY)); 
-        $KEY += 2;
-        $key = <<KEY;
+        $MashFound .= "£|£+";
+        $wild_end   = "£|£$end_KEY";
+    }
+    return ( $L_KEY, $KEY, $MashFound, $MashRewrite, $wild_end );
+}
+
+sub MashStore
+{
+    my ( $L_KEY, $KEY, $MashFound, $MashRewrite, $wild_end ) = MashCalcs @_;
+    my $key = <<KEY;
     R £*                    £: £(SelfMacro {MashTempB} £@ £1 £) £1
-    R £*                    £: £&{MashFound}
-    R £|£+$MashFound£|£+    £: $MashRewrite£|£&{MashTempB}£|£$KEY
-    R £*                    £: £(SelfMacro {MashFound} £@ £1 £) £1
+    R £*                    £: £&{MashFound$L_KEY}
+    R $MashFound            £: $MashRewrite£|£&{MashTempB}$wild_end
+    R £*                    £: £(SelfMacro {MashFound$L_KEY} £@ £1 £) £1
 KEY
-    }
-    else
-    {
-        unless ( scalar @{$FOUND->{'LIST'}} )
-        {
-            $key = <<KEY;
-    R £*                £: £|0
-    R £*                £: £(SelfMacro {MashFound} £@ £1 £) £1
-    R £*                £: £&{MashTempA}
-KEY
-        }
-        $KEY = push @{$FOUND->{'LIST'}}, $load_macro;
-        $FOUND->{'KEY'}->{$KEY} = $load_macro;
-        $key .= <<KEY;
-    R £*                £: £&{MashFound}£|£1
-    R £*                £: £(SelfMacro {MashFound} £@ £1 £) £1
-KEY
-    }
     return $key;
 }
 
 sub MashFound
 {
-    my ($load_macro) = @_;
-    my $LOAD_MACRO = "SelfMacro$load_macro";
-    my $FOUND = $setup{'FOUND'};
-    my ($KEY, $key);
-    if ( $KEY = $FOUND->{'KEY'}->{$load_macro} )
-    {
-        my $MashFound   = "£|£+" x $KEY;
-        my $MashRewrite = "£|" . join "£|", (map "£$_", (1..$KEY)); 
-        $KEY += 2;
-        $key = <<KEY;
+    my ( $L_KEY, $KEY, $MashFound, $MashRewrite, $wild_end ) = MashCalcs @_;
+    my $LOAD_MACRO = "SelfMacro$_[0]";
+    my $key = <<KEY;
     R £+.FOUND              £: $LOAD_MACRO.£1.FOUND
     R $LOAD_MACRO.£+        £: £(SelfMacro {MashTempB} £@ £1 £) £1
-    R £+.FOUND              £: £&{MashFound}
-    R £|£+$MashFound£|£+    £: $LOAD_MACRO.$MashRewrite£|£&{MashTempB}£|£$KEY
-    R $LOAD_MACRO.£+        £: £(SelfMacro {MashFound} £@ £1 £) £1
+    R £+.FOUND              £: £&{MashFound$L_KEY}
+    R $MashFound            £: $LOAD_MACRO.$MashRewrite£|£&{MashTempB}$wild_end
+    R $LOAD_MACRO.£+        £: £(SelfMacro {MashFound$L_KEY} £@ £1 £) £1
 KEY
-    }
-    else
-    {
-        unless ( scalar @{$FOUND->{'LIST'}} )
-        {
-            $key = <<KEY;
-    R £*                £: £|0
-    R £*                £: £(SelfMacro {MashFound} £@ £1 £) £1
-    R £*                £: £&{MashTempA}
-KEY
-        }
-        $KEY = push @{$FOUND->{'LIST'}}, $load_macro;
-        $FOUND->{'KEY'}->{$KEY} = $load_macro;
-        $key .= <<KEY;
-    R £+.FOUND          £: $LOAD_MACRO.£&{MashFound}£|£1.FOUND
-    R $LOAD_MACRO.£+    £: £(SelfMacro {MashFound} £@ £1 £) £1
-KEY
-    }
     return $key;
 }
 
 sub MashFind
 {
-    my ($load_macro) = @_;
-    my $FOUND = $setup{'FOUND'};
-    my ($KEY, $key);
-    if ( $KEY = $FOUND->{'KEY'}->{$load_macro} )
-    {
-        my $MashFound   = "£|£+" x $KEY;
-        $KEY += 1;
-        $key = <<KEY;
-    R £*                    £: £&{MashFound}
-    R £|£+$MashFound£|£+    £: £$KEY
+    my ( $L_KEY, $KEY, $MashFound, $MashRewrite, $wild_end ) = MashCalcs @_;
+    my $key = <<KEY;
+    R £*                    £: £&{MashFound$L_KEY}
+    R $MashFound            £: £$KEY
 KEY
-        return $key;
-    }
-    return "";
+    return $key;
 }
 
 sub macro
@@ -1690,6 +1867,35 @@ Please do not use the macro named B<SScreen_macro> yourself as it is used by thi
 
 =pod
 
+DEFINE_MASHFOUND
+
+=over 2
+
+Must be used after the Perl statement B<define_MashFound> and before any M4 macro statements that refer to the packed macro {MashFound}.
+
+This should be placed in the first B<rule> that is used, and before any other capatalised macros, such as B<FIND> B<IS> etc. Failure to do so will cause unpredictable errors elsewhere when running the M4 hack file.
+
+=back
+
+=cut
+        elsif ( $line =~ s/^DEFINE_MASHFOUND\s*// )
+        {
+            my $key = DEFINE_MASHFOUND;
+            my $found_macro = <<FOUND;
+    INLINE ALLWAYS MASH TempA
+    NOTEST AUTO        
+    $key
+}MACRO
+FOUND
+            my @found_macro = split "\n", $found_macro;
+            $macro = $setup{'macro'}++;
+            push @$macros, "NOSUCH $rule $macro";
+# nested call to process sub macro, and tell it to use the same rule_set as this
+            &macro($rule, $macros, \@found_macro, $rule_set);
+        }
+
+=pod
+
 FOUND
 
 =over 2
@@ -1754,7 +1960,7 @@ Usage:
             my ($load_macro,$comments) = split "\t", $line;
             my $key = MashFind $load_macro;
             my $found_macro = <<FOUND;
-    INLINE ALLWAYS
+    INLINE ALLWAYS NOMASH
     NOTEST AUTO        
     $key
 }MACRO
@@ -2029,7 +2235,7 @@ FOUND
 {MashSelf} provides access to the autosaved argument for this rule.
 
 Usage
-    R £*    £: &£{MashSelf}
+    R $*    £: &${MashSelf}
 
 =back
 
@@ -2139,23 +2345,64 @@ TEST
 TEST macro code, is for testing of the macro, this code does not enter the output file.
 
 TEST lines are converted into a simple HASH as follows
-    {   
-        D   => [],      list of B<.D> define a Macro statements
-        T   => SCALAR   translation macro, to be used before values 
-                        below are supplied to the B<macro> under test
-        V   => [],      values to try with B<macro>
-        E   => [],      values as "V" but must result in "ERR"
-        O   => [],      values as "V" but must result in "OK"
-        F   => [],      values as "V" but must result in "FOUND"
-        I#  => [],      values as "V" but must result in "#" 
-                        where "#" is the expected reply.
-                        eg 
-                            IREPLY
-        SANE => []      list of $setup{sane} keys that define
-                        lists of B<.D> define a Macro statements
-        AUTO            does not have a HASH, but instead creates
-                        (V,E,O,F) as required.
-    }
+
+=over 4
+
+{   
+
+=over 2
+
+=over 16
+
+=item D   => []
+
+list of B<.D> define a Macro statements
+
+=item T   => SCALAR
+
+translation macro, to be used before values below are supplied to the B<macro> under test
+
+=item V   => []
+
+values to try with B<macro>
+
+=item E   => []
+
+values as "V" but must result in "ERR"
+
+=item O   => []
+
+values as "V" but must result in "OK"
+
+=item F   => []
+
+values as "V" but must result in "FOUND"
+
+=item I#  => []
+
+values as "V" but must result in "#" 
+
+where "#" is the expected reply.
+
+eg 
+
+IREPLY
+
+=item SANE => []
+
+list of $setup{sane} keys that define lists of B<.D> define a Macro statements
+
+=item AUTO
+
+does not have a HASH, but instead creates (V,E,O,F) as required.
+
+=back
+
+=back
+
+}
+
+=back
 
 Encoded with leading definition letter and opening bracket, values "," delimited.
     D()    D( {client_addr}198.168.2.1, {client_name}dog.bone.com )
@@ -2482,6 +2729,10 @@ Example below
 
 =back
 
+=back
+
+=back
+
 =head2  inbuilt_rule @_
 
 =over 4
@@ -2593,16 +2844,26 @@ Add your own definitions after this.
 push @EXPORT, "LOCAL_RULESETS";
 sub LOCAL_RULESETS
 {
-    echo <<ECHO;
+    my $echo = <<ECHO;
 LOCAL_RULESETS
 
 STranslate
 R ££| £+        £: £| £1
 R £* ££| £*     £1 £| £2     fake for -bt mode
 R £| £+         £: £| £| £1
-R £| £+         £: £(SelfMacro {MashFound} £@ £1 £) £1
-
 ECHO
+    my $L_KEY   = scalar @{$setup{'FOUND'}->{'LIST'}};
+    $L_KEY = 1 unless scalar $L_KEY;
+    $L_KEY--;
+    foreach my $KEY (0..$L_KEY)
+    {
+        $echo .= <<ECHO;
+R £| £| $KEY £+       £: £(SelfMacro {MashFound$KEY} £@ £1 £) £1
+ECHO
+    }
+    $echo .= <<ECHO;
+ECHO
+    echo $echo;
 }
 
 =head2 build
@@ -3413,3 +3674,217 @@ Note this also contains a cut down snippet of the ANTI SPAM hack that caused thi
 
 =cut
 
+
+=head1 HISTORY
+
+B<Versions>
+
+=over 5
+
+=item 0.1
+
+Nov 2006  1st version, pure sendmail M4 hack, using plug-in Perl programs.
+
+=item 0.2
+
+25 Aug 2007, B<this> 1st CPAN test module, developed to test M4 hack scripts, original script split into B<Utils> for creation and testing, and B<Mail8> the B<ANTI SPAM> engine.
+
+B<Amendments to release version>
+
+=over 3
+
+=item 30 Aug 2007
+
+TEST, HINT & FORCE did not nest.
+
+=item 3 Sept 2007
+
+cf file backup now has a tilde ending "~".
+%setup{paranoid} added for mail8.
+
+=item 5 Sept 2007
+
+NOTEST, for nested MACROS that are already tested by a containing level, or where additional testing makes no sense.
+
+=item 8 Sept 2007
+
+Testing of a Mail8 component with bugs caused files with wrong permisions to be created, meaning the standard user could not re-create them, and some confusion as to what was happening. Utils will now B<whoops> on these problems giving a clear indication as to the real problem.
+
+{MashStack} failed to work when more than one instance was used on a single line.
+
+NOTEST AUTO will not B<moan> meaning auto generated lines that not be meaningfully tested do not complain about it.
+
+FORCE and absence of TEST's now will continue to ask for input for a rule, until nothing is entered
+
+=item 10 Sept 2007
+
+Testing of Reintergrated Mail8 showed that NESTing still did not work, reason found and fixed, also somethings that where expected were not allways supplied.
+
+GLOBAL added to reduce the number of {macro_names} as Mail8 managed to go over B<sendmail>s limit of B<96>, used at the top level S rule to reset counters.
+
+=item 11 Sept 2007
+
+INLINE added, Mail8 managed to go over the standard B<sendmail> limit of B<100> B<named rulesets>, counted a total of 123 in the test.cf, we know we could re-compile sendmail with a bigger limit. But that is something we can not expect of anyone else.
+
+=item 13 Sept 2007
+
+UTF8 EURO currency "character" added can now be used in rule definitions, where $ would have to be escaped.
+
+=item 14 Sept 2007
+
+FOUND inbuilt MACRO added to load B<SelfMacro {macro}> with "$+.FOUND", intention is to remove another B<rule set> as this B<MACRO> will be coded B<INLINE>.
+
+=item 15 Sept 2007
+
+method B<inbuilt_rule> added to enable testing of B<sendmail>s own rule sets, these use the same methods and control HASHs as B<rule> except generates no code.
+
+=item 16 Sept 2007
+
+B<MACRO{> statements (REFUSED, ALREADYREFUSED, IS (REFUSED, ALREADYREFUSED, FOUND), INLINE ALLWAYS) added to both help with reducing the number of generated B<rule sets> and to improve the layout of B<Mail8>.
+
+=item 17 Sept 2007
+    
+B<MACRO{ TEST> sub statement SANE and the method "sane" added to simplify reseting B<sendmail -bt> test session to sensible values.
+
+=item 19 Sept 2007
+
+B<MACRO{ TEST> sub statement AUTO and method "testing_domains" added to enable customers vary the test data to reflect their setup, testing B<Sendmail::M4::Mail8> via B<Sendmail::M4::mail8> with just celmorlauren email setup is not sufficient.    
+
+=item 21 Sept 2007
+
+Documentation clean up, noted that EURO character causes problems with Perldoc for version 5.6 Perl, POUND does not work either (but at least does mess up display)
+
+=back
+
+=item 0.21 
+
+21 Sept 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
+=item 22 Sept 2007
+
+Documentation clean up, noted that POUND character does not display correctly on CPAN, hum it would be better if CPAN coped with UTF8 characters!
+
+B<MACRO{> DEBUG statement added to switch on debuging within the TEST line read in phase, to track difficult to see errors.
+
+{MashSelf} failed to work when more than one instance was used on a single line.
+
+=back
+
+=item 0.22 
+
+22 Sept 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
+=item 22 Sept 2007
+
+installed on a test system, started to run ("too many long names" again) AAARGH! 
+
+{MashTemp} added a variant of {MashStack}, differnce being the reduced number of names generated, the names only being safe only in the current macro, and can be clobbered by contained macros, that use this. You have been warned!
+
+=item 23 Sept 2007
+
+B<Macro{> OPTION added, this is to enable such things 
+
+OPTION NO MASH    
+
+OPTION MASH 1       mash nameing policy uses {Mash1}   
+
+Also added sub option to INLINE ALLWAYS MASH, which overides the normal macro nameing policy, internal methods now use the mash name {MashTempA} for purposes of saving and returning a value.
+
+=back
+
+=item 0.23 
+
+23 Sept 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
+=item 01 Oct 2007
+
+Live on primary, secondary and test systems. When sending mail to "sendmail.org" (via test), sendmail tried and failed to allocate more names for itself ("too many long names" again) AAARGH! However the send did still work (without md5) 
+
+Currently the Sendmail::M4::Mail8.pm version uses 21 "long names", OK for normall sending. But md5 needs more.
+
+=over 4
+
+=item *
+
+MACRO{ statement FOUND & IS FOUND modified, new statements FIND & STORE, now a single {MashFound} macro can be loaded with as many sub names as required.
+
+
+=item *
+
+Translate rule set modified to pack {MashFound}    
+
+=item *
+
+define_MashFoud added, to declare packed components of {MashFound}
+
+Modifications made so that {macro} maybe used for TEST D & SANE statments, but will be packed into {MashFound} if they have been defined. 
+
+=back
+
+=back
+
+=item 0.24 
+
+22 September 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
+=item 08 Oct 2007
+
+Error in B<pod> line 960 space between =head 2, as B<Mail8> has been updated with B<Reply-to> header line checking, this little thing can be fixed and uploaded.
+
+=back
+
+=item 0.25 
+
+08 October 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
+=item 12 Oct 2007
+
+FIND did not have NOMASH stated, so used a long-name when it should not have had done.
+
+Mail8 development, dealing with hotmail & yahoo mail addresses and domains, showed that sendmail has a problem with wild-cards higher than $9, use a $10 and sendmail will complain ( too many wildcards ).
+
+define_MashFound ammended along with others that use the packed form of {MashFound}, although sendmail has a limit of 9 wildcards, {MashFound#} where # is numeric, each containing upto 9 elements, the presence of these makes no other difference to the macro coding, FIND STORE etc all work as before.
+
+=item 13 Oct 2007
+
+POD clean up, HISTORY moved to end of document, layout of POD improved, but some bits will be left for later.
+Code check. Should not touching again until the socks method is ready.
+
+=back
+
+=item 0.26 
+
+13 October 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
+
+=back
+
+=back
+
+=cut
+
+1;
