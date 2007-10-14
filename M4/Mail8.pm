@@ -276,7 +276,7 @@ sub mail8_setup
                            @_;
 # decalare items to be used with packed maceo {MashFound} this is a "long names" conservation method
 # one name instead of many, but no more than 8
-    define_MashFound qw(RelayChecked GoodRelay BadRelay Refused AlreadyRefused Bounce RestrictedHost);
+    define_MashFound qw(RelayChecked GoodRelay BadRelay Refused AlreadyRefused Bounce RestrictedHost, RestrictedUser);
     return $mail8_setup;
 }
 
@@ -1290,17 +1290,17 @@ RULE
         R £+.FOUND      £: MACRO{ £1
             OPTION NOMASH
             TEST D(ftest\@yahoo.com, {RestrictedHost}0) E(yahoo.com) 
-            TEST D(ftest\@yahoo.com, {RestrictedHost}smtp.yahoo.com.FOUND) V(yahoo.com) 
+            TEST D(ftest\@yahoo.com, {RestrictedHost}yahoo.FOUND) V(yahoo.com) 
             R £*            £: £(SelfMacro {MashTempC} £@ £1 £) £1
             FIND RestrictedHost
-            R £+.hotmail.£+     £: hotmail
-            R £+.yahoo.£+       £: yahoo
+            R hotmail.£+    £: hotmail
+            R yahoo.£+      £: yahoo
             R £*            £: £(SelfMacro {MashTempD} £@ £1 £) £1
             R £*            £: £&{MashTempC}
             R £&{MashTempD}.£+      £@ £&{MashTempC}
-            REFUSED £#error £@ 5.1.8 £: "550 SPAMMER, GO AWAY! Mail from <" £&f "> WILL ONLY BE ACCEPTED FROM MAIL DOMAIN: " £&{MashTempC} 
+            REFUSED £#error £@ 5.1.8 £: "550 SPAMMER, GO AWAY! Mail from <" £&f "> WILL ONLY BE ACCEPTED FROM MAIL DOMAIN: " £&{MashTempC} , £&{MashTempD}, £&{MashFound0}
             R £*            £: £&f.FOUND
-            FOUND RestrictedHost
+            FOUND RestrictedUser
         }MACRO
     }MACRO
     #
@@ -1769,11 +1769,11 @@ RULE
         R £+.hotmail.£+     £: hotmail.FOUND
         R £+.FOUND          £: MACRO{ £1
             OPTION NOMASH
-            TEST D(ftest\@yahoo.com,{RestrictedHost}test\@yahoo.com.FOUND,{currHeader}RestrictedHost)
+            TEST D(ftest\@yahoo.com,{RestrictedUser}test\@yahoo.com.FOUND,{currHeader}RestrictedHost)
             TEST D({MashTempC}test\@yahoo.com) V(NA)
             TEST D({MashTempC}notest\@yahoo.com) E(NA)
             TEST D({MashTempC}notest\@hotmail.com) E(NA)
-            FIND RestrictedHost
+            FIND RestrictedUser
             R £+.FOUND          £: £1
             R £&{MashTempC}     £@ £&{MashTempC}
             REFUSED £#error £@ 5.1.1 £: "553 SPAM REFUSED ! From: " £&f " used a Reply-to: address of " £&{MashTempC} " from header line: (Reply-to: " £&{currHeader} " )"
@@ -1781,6 +1781,23 @@ RULE
 RULE
 
     rule "SScreenHeader", $screen_header,@extra;
+
+# end testing
+# HOTMAIL failed too soon, should not have been refused, quite so soon, however sending domain will still be stopped for being too numeric.
+    inbuilt_rule <<RULE;
+Local_check_relay
+TEST SANE(Local_check_relay)
+TEST SANE(Local_check_mail) 
+TEST D({client_name}bay0-omc2-s32.bay0.hotmail.com, {client_addr}65.54.246.168, {client_resolve}OK)
+TEST T(Translate) V(bay0-omc2-s32.bay.hotmail.com 65.54.246.168)
+RULE
+
+    inbuilt_rule <<RULE;
+Local_check_mail
+TEST D(sbay0-omc2-s32.bay0.hotmail.com)
+TEST D(fmrjonas_robert75\@hotmail.com) E(NA) 
+RULE
+
 }
 
 
@@ -2042,7 +2059,23 @@ Documentation clean-up. HISTORY moved to end of document.
 
 =item 0.33
 
-33 October 2007 CPAN Patch Release
+12 October 2007 CPAN Patch Release
+
+B<Amendments to release version>
+
+=over 3
+
+=item 14 Oct 2007
+
+Whoops, a hotmail mail was refused too early due to a typo, strung several tests together at the end with the unlucky users connection details, problem fixed.
+
+Corrected version will run on the mail server, before it is uploaded.
+
+=back
+
+=item 0.34
+
+14 October 2007 CPAN Patch Release
 
 B<Amendments to release version>
 

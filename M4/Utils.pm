@@ -9,7 +9,7 @@ use strict;
 
 @ISA    = qw(Exporter);
 @EXPORT = ();
-$VERSION= 0.26;
+$VERSION= 0.27;
 
 use IO::File;
 use IO::Select;
@@ -25,7 +25,7 @@ Sendmail::M4::Utils - create and test sendmail M4 hack macro files
 
 =head1 STATUS
 
-Version 0.26 (Beta)
+Version 0.27 (Beta)
 
 This compiles the M4 sendmail hack used by celmorlauren since version 0.23
 
@@ -1506,10 +1506,14 @@ sub MashCalcs
     my $FOUND_LIST  = @{$FOUND->{'LIST'}->[$L_KEY]};
     my $MashFound   = "£|£+" x $KEY;
     my $end_KEY     = $KEY - 1;
-    my $MashRewrite = "£|" . join "£|", (map "£$_", (1..$end_KEY)); 
+    my $MashRewrite = "";
+    if ( $KEY > 1 )
+    {
+        $MashRewrite = "£|" . join "£|", (map "£$_", (1..$end_KEY)); 
+    }
     $end_KEY += 2;
     my $wild_end = "";
-    if ( $FOUND_LIST < 9 )
+    if ( $FOUND_LIST < 9 or $KEY < 9 )
     {
         $MashFound .= "£|£+";
         $wild_end   = "£|£$end_KEY";
@@ -3880,8 +3884,20 @@ B<Amendments to release version>
 
 =over 3
 
+=item 14 Oct 2007
+
+Mail8 added another component to MashFound# making 9 in one, causing M4 statement not to formated correctly, failure in logic fixed.
 
 =back
+
+=item 0.27 
+
+14 October 2007 CPAN Amended version
+
+B<Amendments to release version>
+
+=over 3
+
 
 =back
 
